@@ -10,13 +10,13 @@ public class LocalFiles extends ContentProvider {
     public boolean onCreate(){return true;}
     private File file(Uri uri) throws FileNotFoundException {
         String name=uri.getLastPathSegment();
-        if(!"capture.jpg".equals(name) && !"cartao.pdf".equals(name)) throw new FileNotFoundException();
+        if(!"cartao.pdf".equals(name)) throw new FileNotFoundException();
         return new File(getContext().getCacheDir(),name);
     }
     public ParcelFileDescriptor openFile(Uri uri,String mode) throws FileNotFoundException {
         return ParcelFileDescriptor.open(file(uri),ParcelFileDescriptor.parseMode(mode));
     }
-    public String getType(Uri uri){return "cartao.pdf".equals(uri.getLastPathSegment())?"application/pdf":"image/jpeg";}
+    public String getType(Uri uri){return "application/pdf";}
     public Cursor query(Uri uri,String[] projection,String selection,String[] args,String order){
         try {
             File f=file(uri); String[] cols=projection==null?new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE}:projection;

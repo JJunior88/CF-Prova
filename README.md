@@ -1,48 +1,50 @@
 # CF Prova
 
-Aplicativo Android nativo em Java para corrigir provas de múltipla escolha usando a câmera. Funciona offline e não envia imagens ou respostas para servidores.
+App Android para corrigir cartões de respostas com a **câmera ao vivo**. Cadastre o gabarito, abra a câmera e aponte para a folha: após uma leitura estável, a nota aparece automaticamente, sem fotografar, salvar imagens, tocar em marcadores ou confirmar respostas. Funciona offline.
 
 ## Como usar
 
-1. Defina o nome e a quantidade de questões (5 a 40).
-2. Edite e salve o gabarito do professor (alternativas A–E). As respostas começam em A: confira todas.
-3. Gere o PDF do cartão e compartilhe com um aplicativo de impressão. Use o cartão desta versão, sem cortar os quatro quadrados pretos.
-4. O aluno preenche completamente uma bolha por questão com caneta escura.
-5. Fotografe a folha inteira na vertical, com boa iluminação.
-6. Toque no centro dos quatro quadrados na ordem indicada: superior esquerdo, superior direito, inferior direito, inferior esquerdo, conforme o texto impresso.
-7. Revise as respostas detectadas comparando com a foto. Resolva as marcações “Revisar”; respostas em branco valem zero.
-8. Confirme para calcular a nota de 0 a 10, com questões de mesmo peso e detalhes dos acertos e erros.
+1. Defina nome e quantidade de questões (5 a 40).
+2. Edite e salve o gabarito do professor (A–E). As respostas começam em A: confira todas antes de corrigir.
+3. Gere e imprima o **cartão v2** pelo aplicativo. Cartões da versão anterior precisam ser substituídos. Não recorte os quatro quadrados nem os pequenos códigos no alto da folha.
+4. O aluno preenche uma bolha inteira por questão, com caneta escura.
+5. Toque em **Abrir câmera e corrigir** e permita acesso à câmera.
+6. Mantenha a folha plana, inteira e na vertical, com o **quadrado maior no alto à esquerda**. Use boa iluminação, sem sombras. Toque na prévia se precisar ajustar o foco.
+7. Aguarde o foco e mantenha o celular parado. A nota aparece assim que pelo menos quatro leituras concordarem por cerca de um segundo (o tempo total depende do aparelho e do enquadramento).
+8. Veja os acertos por questão e toque em **Corrigir outro aluno** para uma nova leitura.
+
+Respostas em branco valem zero. Marcas fracas ou duplas impedem a nota automática e geram uma orientação na tela: corrija o preenchimento ou melhore o enquadramento. Questões têm o mesmo peso; a nota vai de 0 a 10.
 
 ## Desenvolvimento
 
-Requisitos: JDK 17 ou 21, Android SDK Platform 35 e Build Tools 35.0.0. Configure `ANDROID_HOME` ou `sdk.dir` no arquivo local (ignorado) `local.properties`.
+Requisitos: JDK 17 ou 21, Android SDK Platform 35 e Build Tools 35.0.0. Configure `ANDROID_HOME` ou `sdk.dir` no arquivo local ignorado `local.properties`.
 
 ```sh
-./gradlew testDebugUnitTest assembleDebug lintDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`. Instale pelo Android Studio ou `adb install -r app/build/outputs/apk/debug/app-debug.apk` em Android 8.0 ou posterior. É uma compilação de desenvolvimento, sem assinatura de publicação.
+Na nuvem preparada: `/workspace/tooling/cf-gradle testDebugUnitTest lintDebug assembleDebug`.
 
-No ambiente de nuvem preparado, execute `/workspace/tooling/cf-gradle testDebugUnitTest assembleDebug lintDebug`. Esse comando usa o JDK, SDK e cache instalados em `/workspace/tooling`, com as configurações locais de rede e diretórios graváveis.
-
-## Leitura óptica e limitações
-
-A imagem é corrigida por perspectiva a partir dos quatro pontos selecionados; a região interna de cada bolha é amostrada para estimar preenchimento. Marcações múltiplas ou fracas são sinalizadas. Essa técnica exige o cartão padronizado gerado pelo app, e não interpreta gabaritos arbitrários ou respostas manuscritas.
-
-A revisão humana é obrigatória: sombras, desfoque, papel curvado e alinhamento impreciso podem causar erros inclusive em respostas aparentemente válidas. A precisão em cartões físicos precisa ser validada em aparelhos reais antes do uso em avaliações. Os testes unitários cobrem classificação de marcações e cálculo da nota, não a câmera ou precisão óptica real.
-
-Esta versão mantém somente um gabarito no aparelho. Não há contas, histórico de alunos, exportação de notas ou pesos por questão. Fotos temporárias e PDF ficam no cache privado e podem ser substituídos pela próxima captura/geração. A câmera usa o aplicativo de câmera instalado no dispositivo.
+APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com câmera traseira. APK de desenvolvimento, sem assinatura de publicação.
 
 ## Testes e APK pelo GitHub
 
-Em cada envio à branch `main` e em pull requests, o GitHub Actions executa os testes unitários, a análise estática e a compilação do APK. Também é possível iniciar manualmente:
+O GitHub Actions executa os testes, a análise estática e gera o APK em cada envio à `main` e em pull requests. Para iniciar manualmente, abra **Actions → Android — testes e APK → Run workflow**.
 
-1. Abra a aba **Actions** do repositório.
-2. Selecione **Android — testes e APK** e clique em **Run workflow**, escolhendo `main`.
-3. Abra a execução e espere o trabalho **Testar e compilar** terminar com sucesso.
-4. Na seção **Artifacts**, baixe **CF-Prova-Android-debug** e extraia o ZIP para obter `app-debug.apk`. É necessário estar conectado ao GitHub. Os artefatos ficam disponíveis por 14 dias.
-5. Transfira o APK para um celular Android 8.0 ou posterior. Abra pelo aplicativo Arquivos, autorize a instalação dessa origem quando solicitado e toque em **Instalar**. Depois, pode desativar a autorização dessa origem.
+Após uma execução bem-sucedida, baixe **CF-Prova-Android-debug** em **Artifacts** (disponível por 14 dias), extraia o ZIP e abra `app-debug.apk` no celular. Autorize a instalação dessa origem quando solicitado. É necessário estar conectado ao GitHub para baixar artefatos.
 
-O APK usa assinatura de desenvolvimento e serve para testes. Se existir outra versão assinada com uma chave diferente, a atualização pode ser recusada: desinstalar a versão anterior apaga o gabarito local. Não é necessário desinstalar se a atualização funcionar.
+Se houver outra versão assinada com uma chave diferente, o Android pode recusar a atualização. Desinstalar a anterior apaga o gabarito salvo. Evite desinstalar se a atualização funcionar.
 
-Para conferir o resultado no celular, cadastre cinco questões, preencha quatro corretamente e uma incorretamente no cartão impresso e confirme a leitura: a nota deve ser **8,0**. Teste também questões em branco e marcações duplas. O GitHub Actions não testa a câmera nem substitui a validação física da leitura óptica.
+## Validação no celular
+
+Gere um cartão v2 de cinco questões, preencha quatro respostas corretas e uma errada e aponte a câmera: a nota esperada é **8,0**, sem disparar foto nem tocar nos cantos. Teste também respostas em branco, marcações duplas, folha ausente, cartão invertido, cartão com quantidade de questões diferente, sombras, foco, recusa da permissão e saída/retorno do aplicativo. Ao trocar de aluno, toque em **Corrigir outro aluno**.
+
+Os testes automatizados incluem imagens sintéticas do layout, distorção, códigos de identificação, bloqueios de leitura e estabilidade entre quadros. Não substituem testes de câmera e cartões físicos. A precisão óptica em aparelhos reais ainda precisa ser validada; confira os detalhes antes de registrar uma nota oficial.
+
+## Como funciona e limites
+
+CameraX fornece a prévia e os quadros de luminância, descartando quadros antigos para evitar fila. O leitor localiza os quadrados pretos, corrige a perspectiva matematicamente, valida o código do cartão e a quantidade de questões, confere as bordas das bolhas e classifica o preenchimento. A nota só é liberada após consenso temporal; qualquer leitura inválida reinicia o consenso. Quadros ficam apenas na memória, sem arquivo de foto ou envio para servidores.
+
+Use somente o cartão v2 do app, com a orientação indicada. Cartões arbitrários, papel curvado, rasuras, sombras e desfoque podem impedir a leitura ou causar erros. O código identifica o formato e a quantidade de questões, não o nome da prova: escolha e confira o gabarito correto no aparelho.
+
+Mantém um gabarito por aparelho. Não há contas, histórico de alunos, pesos individuais ou exportação de notas. O PDF temporário fica no cache privado.
