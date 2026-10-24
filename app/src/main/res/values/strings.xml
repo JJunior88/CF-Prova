@@ -1,2 +1,26 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources><string name="scanner_0">Leitura ao vivo</string><string name="scanner_1">Enquadre o cartão v2 inteiro, com o quadrado maior no alto à esquerda. A nota aparecerá automaticamente.</string><string name="scanner_2">Ativar câmera</string><string name="scanner_3">Voltar</string><string name="scanner_4">Permita o acesso à câmera para ler ao vivo. Se o Android não perguntar novamente, ative em Configurações &gt; Aplicativos &gt; CF Prova &gt; Permissões.</string><string name="scanner_5">Não foi possível iniciar a câmera traseira. Feche outros aplicativos de câmera e toque em Ativar câmera.</string><string name="scanner_6">Não foi possível ler este quadro. Reenquadre o cartão e aguarde o foco.</string></resources>
+<resources>
+    <string name="camera_title">Fotografar cartão</string>
+    <string name="camera_guide">Enquadre um cartão v2 inteiro, na vertical, com o quadrado maior no alto à esquerda. Toque na prévia para focar e depois em Tirar foto.</string>
+    <string name="enable_camera">Ativar câmera</string>
+    <string name="back">Voltar</string>
+    <string name="camera_permission">Permita acesso à câmera. Se o Android não perguntar novamente, ative em Configurações &gt; Aplicativos &gt; CF Prova &gt; Permissões.</string>
+    <string name="camera_error">Não foi possível iniciar a câmera traseira. Feche outros aplicativos de câmera e toque em Ativar câmera.</string>
+    <string name="photo_error">Não foi possível tirar ou processar a foto. Ajuste o foco e tente novamente.</string>
+    <string name="processing_photo">Fotografando e lendo o cartão…</string>
+    <string name="take_photo">Tirar foto</string>
+    <string name="review_title">Conferir foto e respostas</string>
+    <string name="photo_memory">Foto temporária, apenas na memória: não é salva na galeria nem em arquivo. Ao sair desta tela, ela é descartada.</string>
+    <string name="photo_description">Foto do cartão de respostas para conferência</string>
+    <string name="zoom_hint">Toque na foto para ampliar. Na ampliação, use dois dedos para aproximar e arraste para conferir.</string>
+    <string name="photo_unreadable">Não foi possível obter respostas confiáveis desta foto. %1$s. Tire outra foto para corrigir.</string>
+    <string name="review_answers">Confira as respostas lidas na foto. Se necessário, ajuste as alternativas abaixo; acertos e nota são atualizados na hora.</string>
+    <string name="blank">Em branco</string>
+    <string name="question_key">%1$02d • Gabarito: %2$s</string>
+    <string name="retake">Descartar e tirar outra foto</string>
+    <string name="finish_review">Finalizar e descartar foto</string>
+    <string name="discard_exit">Descartar foto e sair</string>
+    <string name="no_result">Leitura não concluída</string>
+    <string name="photo_result">Acertos: %1$d / %2$d\nNota: %3$.1f / 10</string>
+    <string name="close_photo">Voltar à conferência</string>
+</resources>

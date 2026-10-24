@@ -3,7 +3,7 @@ android {
     namespace 'br.com.cfprova'
     compileSdk 35
     buildToolsVersion "35.0.0"
-    defaultConfig { applicationId 'br.com.cfprova'; minSdk 26; targetSdk 35; versionCode 4; versionName '0.3.1' }
+    defaultConfig { applicationId 'br.com.cfprova'; minSdk 26; targetSdk 35; versionCode 5; versionName '0.4.0' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies { implementation 'androidx.activity:activity:1.9.3'; implementation 'androidx.core:core:1.13.1'; implementation 'androidx.camera:camera-camera2:1.4.2'; implementation 'androidx.camera:camera-lifecycle:1.4.2'; implementation 'androidx.camera:camera-view:1.4.2'; testImplementation 'junit:junit:4.13.2' }

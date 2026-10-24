@@ -20,18 +20,15 @@ public class LiveReaderTest {
             if(black)pixels[y*width+x]=(byte)ink;
         }return pixels;
     }
-    @Test public void liveCameraPipelineAutomaticallyCountsCorrectAnswers(){
+    @Test public void capturedPhotoAutomaticallyCountsCorrectAnswers(){
         int[] key={0,1,2,3,4};
         LiveReader.Reading reading=new LiveReader().read(card(5,new int[]{0,1,2,3,0},0,true,250,20),800,1100,5);
         assertNotNull(reading.hint,reading.answers);
-        StableReading stable=new StableReading();
-        assertNull(stable.accept(reading.answers,0));
-        assertNull(stable.accept(reading.answers,300));
-        assertNull(stable.accept(reading.answers,600));
-        int[] result=stable.accept(reading.answers,900);
-        assertNotNull(result);
-        assertEquals(4,Grading.correct(key,result));
-        assertEquals(8.0,Grading.grade(key,result),.001);
+        assertEquals(4,Grading.correct(key,reading.answers));
+        assertEquals(8.0,Grading.grade(key,reading.answers),.001);
+        reading.answers[4]=4; // The teacher corrects this answer while checking the photo.
+        assertEquals(5,Grading.correct(key,reading.answers));
+        assertEquals(10.0,Grading.grade(key,reading.answers),.001);
     }
     @Test public void readsPrintedLayoutIncludingBlanks(){int[] a={0,1,-1,3,4};LiveReader.Reading r=new LiveReader().read(card(5,a,0,true,250,20),800,1100,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}
     @Test public void readsSkewedFortyQuestionCard(){int[] a=new int[40];for(int i=0;i<40;i++)a[i]=i%5;LiveReader.Reading r=new LiveReader().read(card(40,a,.06,true,220,25),800,1100,40);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}
@@ -41,7 +38,4 @@ public class LiveReaderTest {
     @Test public void doubleMarkDoesNotProduceGrade(){int[] a={0,1,-2,3,4};LiveReader.Reading r=new LiveReader().read(card(5,a,0,true,250,20),800,1100,5);assertNull(r.answers);assertTrue(r.hint.contains("questão 3"));}
     @Test public void missingSheetDoesNotProduceGrade(){byte[] p=new byte[800*1100];Arrays.fill(p,(byte)250);assertNull(new LiveReader().read(p,800,1100,5).answers);}
     @Test public void darkFrameDoesNotProduceGrade(){assertNull(new LiveReader().read(new byte[800*1100],800,1100,5).answers);}
-    @Test public void requiresTimeAndRepeatedAgreement(){StableReading s=new StableReading();int[] a={0,1,2};assertNull(s.accept(a,0));assertNull(s.accept(a,300));assertNull(s.accept(a,600));assertArrayEquals(a,s.accept(a,900));}
-    @Test public void disagreementAndMissingFrameResetConsensus(){StableReading s=new StableReading();int[] a={0,1,2};s.accept(a,0);s.accept(a,300);s.accept(a,600);assertNull(s.accept(new int[]{1,1,2},900));assertNull(s.accept(a,1200));s.accept(null,1500);assertNull(s.accept(a,1800));}
-    @Test public void pauseCannotReusePreviousConsensus(){StableReading s=new StableReading();int[] a={0,1,2};s.accept(a,0);s.accept(a,300);s.accept(a,600);assertNull(s.accept(a,2000));}
 }

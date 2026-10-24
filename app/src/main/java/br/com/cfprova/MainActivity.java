@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
     private void button(String s,Runnable action){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(TEAL);body.addView(b,new LinearLayout.LayoutParams(-1,dp(56)));b.setOnClickListener(v->action.run());}
     private EditText field(String hint,String value){EditText e=new EditText(this);e.setHint(hint);e.setText(value);e.setSingleLine();body.addView(e);return e;}
     private void home(){
-        page("Corrigir ficou simples", "Cadastre, aponte a câmera e veja a nota. Leitura ao vivo, sem salvar fotos e sem internet.");
+        page("Corrigir ficou simples", "Fotografe no app e confira as respostas e a nota. A foto fica apenas na memória, sem internet.");
         body.addView(text("1  Prepare a prova",20));
         title=field("Nome da prova",exam);count=field("Número de questões (5 a 40)",""+key.length);count.setInputType(2);
         button("Editar gabarito",()->{if(configure())editKey();});
@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         button("PDF • 1 cartão de 1/4 A4",()->{if(configure())pdf();});
         body.addView(text("2  Leia o cartão do aluno",20));
         body.addView(text("Use somente o cartão gerado pelo app. Preencha uma bolha por questão com caneta escura. Aponte para um cartão por vez, com os quatro marcadores visíveis, boa luz e sem sombras. Use o cartão v2, com o quadrado maior no alto à esquerda.",15));
-        button("Abrir câmera e corrigir",()->{if(configure())capture();});
+        button("Abrir câmera para fotografar",()->{if(configure())capture();});
         body.addView(text("O gabarito fica salvo neste aparelho. A primeira versão trabalha com uma prova por vez, alternativas A–E e questões de mesmo peso.",14));
     }
     private boolean configure(){
@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){message("Não foi possível gerar ou compartilhar o PDF: "+e.getMessage());}finally{doc.close();}
     }
     private void capture(){
-        startActivityForResult(new Intent(this,ScannerActivity.class).putExtra("questions",key.length),1);
+        startActivityForResult(new Intent(this,ScannerActivity.class).putExtra("key",key.clone()).putExtra("exam",exam),1);
     }
     @Override protected void onActivityResult(int request,int code,Intent data){
         super.onActivityResult(request,code,data);
@@ -119,9 +119,9 @@ public class MainActivity extends Activity {
         page("Resultado",exam);
         body.addView(text(hits+" acertos de "+key.length+" questões",34));
         body.addView(text(String.format(new Locale("pt","BR"),"Nota: %.1f / 10",Grading.grade(key,answers)),28));
-        body.addView(text("Resultado automático da leitura pela câmera.",15));
+        body.addView(text("Conferência finalizada. A foto foi descartada.",15));
         for(int i=0;i<key.length;i++)body.addView(text(String.format(Locale.ROOT,"%02d",i+1)+"   "+(answers[i]<0?"Em branco":""+(char)('A'+answers[i]))+"   •   Gabarito: "+(char)('A'+key[i])+"   "+(answers[i]==key[i]?"✓":"✗"),16));
-        body.addView(text("Leitura automática estável. Respostas em branco valem zero. Confira os detalhes abaixo antes de registrar a nota.",14));
+        body.addView(text("Respostas em branco valem zero. Confira os detalhes antes de registrar a nota.",14));
         button("Corrigir outro aluno",this::capture);
         button("Voltar ao início",this::home);
     }
