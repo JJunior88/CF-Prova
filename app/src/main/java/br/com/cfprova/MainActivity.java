@@ -45,9 +45,10 @@ public class MainActivity extends Activity {
         body.addView(text("1  Prepare a prova",20));
         title=field("Nome da prova",exam);count=field("Número de questões (5 a 40)",""+key.length);count.setInputType(2);
         button("Editar gabarito",()->{if(configure())editKey();});
-        button("Gerar cartão para impressão",()->{if(configure())pdf();});
+        button("Word editável • 4 cartões por A4",()->{if(configure())word();});
+        button("PDF • 4 cartões por A4",()->{if(configure())pdf();});
         body.addView(text("2  Leia o cartão do aluno",20));
-        body.addView(text("Use somente o cartão gerado pelo app. Preencha uma bolha por questão com caneta escura. Enquadre a folha inteira na vertical, com boa luz e sem sombras. Use o cartão v2, com o quadrado maior no alto à esquerda.",15));
+        body.addView(text("Use somente o cartão gerado pelo app. Preencha uma bolha por questão com caneta escura. Aponte para um cartão por vez, com os quatro marcadores visíveis, boa luz e sem sombras. Use o cartão v2, com o quadrado maior no alto à esquerda.",15));
         button("Abrir câmera e corrigir",()->{if(configure())capture();});
         body.addView(text("O gabarito fica salvo neste aparelho. A primeira versão trabalha com uma prova por vez, alternativas A–E e questões de mesmo peso.",14));
     }
@@ -71,27 +72,37 @@ public class MainActivity extends Activity {
         sp.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){} public void onItemSelected(AdapterView<?> p,View v,int pos,long id){values[i]=pos<5?pos:pos==5?-1:-2;}});
         row.addView(sp,new LinearLayout.LayoutParams(dp(150),dp(52)));body.addView(row);
     }
-    private float rowY(int i){return 195+i*(610f/Math.max(1,key.length-1));}
+    private void share(String file,String type){
+        Intent send=new Intent(Intent.ACTION_SEND).setType(type).putExtra(Intent.EXTRA_STREAM,uri(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        send.setClipData(ClipData.newRawUri("Cartões de respostas",uri(file)));
+        startActivity(Intent.createChooser(send,"Salvar ou compartilhar cartões"));
+    }
+    private void word(){
+        try {
+            Bitmap image=Bitmap.createBitmap(1200,1800,Bitmap.Config.ARGB_8888);
+            ByteArrayOutputStream png=new ByteArrayOutputStream();
+            try {Canvas canvas=new Canvas(image);canvas.scale(2,2);CardDrawing.draw(canvas,key.length);image.compress(Bitmap.CompressFormat.PNG,100,png);}finally{image.recycle();}
+            try(FileOutputStream out=new FileOutputStream(new File(getCacheDir(),"cartoes.docx"))){CardDocx.write(out,png.toByteArray(),exam);}
+            share("cartoes.docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        }catch(Exception e){message("Não foi possível gerar ou compartilhar o Word: "+e.getMessage());}
+    }
     private void pdf(){
         PdfDocument doc=new PdfDocument();
         try {
-            PdfDocument.Page p=doc.startPage(new PdfDocument.PageInfo.Builder(600,900,1).create());Canvas c=p.getCanvas();c.drawColor(Color.WHITE);Paint ink=new Paint(3);ink.setColor(Color.BLACK);
-            for(int x:new int[]{40,560})for(int y:new int[]{40,860}){int r=x==40&&y==40?14:10;c.drawRect(x-r,y-r,x+r,y+r,ink);}
-            for(int i=0;i<14;i++)if(LiveReader.codeBit(i,key.length))c.drawRect(97+i*24,42,103+i*24,48,ink);
-            ink.setTextSize(20);c.drawText("CF PROVA • "+exam,70,85,ink);ink.setTextSize(12);
-            c.drawText("Aluno: __________________________________________",70,112,ink);
-            c.drawText(key.length+" questões • A–E • Uma resposta por questão",70,135,ink);
-            c.drawText("Preencha toda a bolha. Não dobre ou escreva sobre os marcadores.",70,153,ink);
-            for(int j=0;j<5;j++)c.drawText(""+(char)('A'+j),216+j*65,175,ink);
-            for(int i=0;i<key.length;i++){
-                float y=rowY(i);ink.setStyle(Paint.Style.FILL);c.drawText(String.format(Locale.ROOT,"%02d",i+1),150,y+4,ink);
-                ink.setStyle(Paint.Style.STROKE);ink.setStrokeWidth(1);for(int j=0;j<5;j++)c.drawCircle(220+j*65,y,6,ink);
+            PdfDocument.Page page=doc.startPage(new PdfDocument.PageInfo.Builder(595,842,1).create());Canvas c=page.getCanvas();c.drawColor(Color.WHITE);
+            Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);ink.setColor(Color.BLACK);ink.setTextSize(7.5f);
+            float mm=72f/25.4f;
+            for(int row=0;row<2;row++)for(int col=0;col<2;col++){
+                float left=5*mm+col*100*mm,top=5*mm+row*142.875f*mm;
+                c.drawText("Instituição: __________________________________",left+6.2f*mm,top+8,ink);
+                c.drawText("Professor(a): _________________________________",left+6.2f*mm,top+17,ink);
+                String title="Avaliação: "+exam;int end=ink.breakText(title,true,87*mm,null);
+                c.drawText(title.substring(0,end),left+6.2f*mm,top+26,ink);
+                c.save();c.translate(left+6.5f*mm,top+28);c.scale(87*mm/600,87*mm/600);CardDrawing.draw(c,key.length);c.restore();
             }
-            ink.setStyle(Paint.Style.FILL);ink.setTextSize(10);c.drawText("CF Prova v2 • Leitura ao vivo • Mantenha os quatro quadrados visíveis.",70,837,ink);
-            doc.finishPage(p);try(FileOutputStream out=new FileOutputStream(new File(getCacheDir(),"cartao.pdf"))){doc.writeTo(out);}
-            Intent send=new Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM,uri("cartao.pdf")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(send,"Imprimir ou compartilhar cartão"));
-        }catch(Exception e){message("Não foi possível gerar ou compartilhar o cartão: "+e.getMessage());} finally {doc.close();}
+            doc.finishPage(page);try(FileOutputStream out=new FileOutputStream(new File(getCacheDir(),"cartao.pdf"))){doc.writeTo(out);}
+            share("cartao.pdf","application/pdf");
+        }catch(Exception e){message("Não foi possível gerar ou compartilhar o PDF: "+e.getMessage());}finally{doc.close();}
     }
     private void capture(){
         startActivityForResult(new Intent(this,ScannerActivity.class).putExtra("questions",key.length),1);

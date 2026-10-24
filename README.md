@@ -6,10 +6,10 @@ App Android para corrigir cartões de respostas com a **câmera ao vivo**. Cadas
 
 1. Defina nome e quantidade de questões (5 a 40).
 2. Edite e salve o gabarito do professor (A–E). As respostas começam em A: confira todas antes de corrigir.
-3. Gere e imprima o **cartão v2** pelo aplicativo. Cartões da versão anterior precisam ser substituídos. Não recorte os quatro quadrados nem os pequenos códigos no alto da folha.
+3. Gere o **Word editável (.docx)** ou o **PDF**, com **quatro cartões por folha A4** (cada cartão ocupa menos de 1/4 da página). No Word, personalize instituição, professor e avaliação. Imprima em A4, a 100%, e recorte apenas entre os cartões, preservando os quatro marcadores e o código de cada um.
 4. O aluno preenche uma bolha inteira por questão, com caneta escura.
 5. Toque em **Abrir câmera e corrigir** e permita acesso à câmera.
-6. Mantenha a folha plana, inteira e na vertical, com o **quadrado maior no alto à esquerda**. Use boa iluminação, sem sombras. Toque na prévia se precisar ajustar o foco.
+6. Aponte para **um cartão por vez** (aproxime ou recorte a folha). Mantenha o cartão plano, inteiro e na vertical, com o **quadrado maior no alto à esquerda**. Use boa iluminação, sem sombras. Toque na prévia se precisar ajustar o foco.
 7. Aguarde o foco e mantenha o celular parado. A nota aparece assim que pelo menos quatro leituras concordarem por cerca de um segundo (o tempo total depende do aparelho e do enquadramento).
 8. Veja os acertos por questão e toque em **Corrigir outro aluno** para uma nova leitura.
 
@@ -47,4 +47,14 @@ CameraX fornece a prévia e os quadros de luminância, descartando quadros antig
 
 Use somente o cartão v2 do app, com a orientação indicada. Cartões arbitrários, papel curvado, rasuras, sombras e desfoque podem impedir a leitura ou causar erros. O código identifica o formato e a quantidade de questões, não o nome da prova: escolha e confira o gabarito correto no aparelho.
 
-Mantém um gabarito por aparelho. Não há contas, histórico de alunos, pesos individuais ou exportação de notas. O PDF temporário fica no cache privado.
+Mantém um gabarito por aparelho. Não há contas, histórico de alunos, pesos individuais ou exportação de notas. Os arquivos Word/PDF temporários ficam no cache privado.
+
+## Modelo compacto para qualquer instituição
+
+A versão 0.3.0 exporta uma folha A4 com quatro cartões: a área óptica de cada cartão mede **87 × 130,5 mm**, com cabeçalho editável acima, dentro de uma célula de aproximadamente **100 × 142,9 mm**. Isso deixa margens de impressão e cabe em um quarto da folha A4 (105 × 148,5 mm). O modelo não tem logotipo nem nome de instituição fixo.
+
+[Baixar modelo Word de 20 questões](modelos/cartoes-20-questoes.docx). Para outra quantidade, use a exportação do aplicativo (5 a 40 questões). É um arquivo Word moderno `.docx`, não o formato binário antigo `.doc`.
+
+Edite os três campos do cabeçalho em cada cartão, mantendo as três linhas. A grade óptica é uma imagem fixa para não deslocar bolhas, código ou marcadores durante a edição; não a recorte, distorça ou reprojete. O aluno preenche nome, turma e data à mão. A quantidade de questões está codificada na imagem: para alterá-la, gere novamente pelo app.
+
+Os PDFs também contêm quatro cartões por A4. Ao imprimir no Word, mantenha A4 e escala 100%; confira a prévia de uma página. A edição do cabeçalho e a impressão devem preservar as proporções. Para a câmera, enquadre somente um cartão, perto o suficiente para ler as bolhas pequenas. Especialmente com 40 questões, valide primeiro a impressão e o foco no aparelho. A leitura ao vivo continua usando a geometria v2.
