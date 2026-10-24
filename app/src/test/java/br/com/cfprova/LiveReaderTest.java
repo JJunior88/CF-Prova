@@ -20,6 +20,19 @@ public class LiveReaderTest {
             if(black)pixels[y*width+x]=(byte)ink;
         }return pixels;
     }
+    @Test public void liveCameraPipelineAutomaticallyCountsCorrectAnswers(){
+        int[] key={0,1,2,3,4};
+        LiveReader.Reading reading=new LiveReader().read(card(5,new int[]{0,1,2,3,0},0,true,250,20),800,1100,5);
+        assertNotNull(reading.hint,reading.answers);
+        StableReading stable=new StableReading();
+        assertNull(stable.accept(reading.answers,0));
+        assertNull(stable.accept(reading.answers,300));
+        assertNull(stable.accept(reading.answers,600));
+        int[] result=stable.accept(reading.answers,900);
+        assertNotNull(result);
+        assertEquals(4,Grading.correct(key,result));
+        assertEquals(8.0,Grading.grade(key,result),.001);
+    }
     @Test public void readsPrintedLayoutIncludingBlanks(){int[] a={0,1,-1,3,4};LiveReader.Reading r=new LiveReader().read(card(5,a,0,true,250,20),800,1100,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}
     @Test public void readsSkewedFortyQuestionCard(){int[] a=new int[40];for(int i=0;i<40;i++)a[i]=i%5;LiveReader.Reading r=new LiveReader().read(card(40,a,.06,true,220,25),800,1100,40);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}
     @Test public void readsPerspectiveDistortion(){int[] a={4,3,2,1,0};LiveReader.Reading r=new LiveReader().read(card(5,a,.04,true,250,20,.0001),800,1100,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}

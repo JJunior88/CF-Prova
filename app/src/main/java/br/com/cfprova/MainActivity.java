@@ -45,8 +45,8 @@ public class MainActivity extends Activity {
         body.addView(text("1  Prepare a prova",20));
         title=field("Nome da prova",exam);count=field("Número de questões (5 a 40)",""+key.length);count.setInputType(2);
         button("Editar gabarito",()->{if(configure())editKey();});
-        button("Word editável • 4 cartões por A4",()->{if(configure())word();});
-        button("PDF • 4 cartões por A4",()->{if(configure())pdf();});
+        button("Word editável • 1 cartão de 1/4 A4",()->{if(configure())word();});
+        button("PDF • 1 cartão de 1/4 A4",()->{if(configure())pdf();});
         body.addView(text("2  Leia o cartão do aluno",20));
         body.addView(text("Use somente o cartão gerado pelo app. Preencha uma bolha por questão com caneta escura. Aponte para um cartão por vez, com os quatro marcadores visíveis, boa luz e sem sombras. Use o cartão v2, com o quadrado maior no alto à esquerda.",15));
         button("Abrir câmera e corrigir",()->{if(configure())capture();});
@@ -74,8 +74,8 @@ public class MainActivity extends Activity {
     }
     private void share(String file,String type){
         Intent send=new Intent(Intent.ACTION_SEND).setType(type).putExtra(Intent.EXTRA_STREAM,uri(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        send.setClipData(ClipData.newRawUri("Cartões de respostas",uri(file)));
-        startActivity(Intent.createChooser(send,"Salvar ou compartilhar cartões"));
+        send.setClipData(ClipData.newRawUri("Cartão de respostas",uri(file)));
+        startActivity(Intent.createChooser(send,"Salvar ou compartilhar cartão"));
     }
     private void word(){
         try {
@@ -92,8 +92,8 @@ public class MainActivity extends Activity {
             PdfDocument.Page page=doc.startPage(new PdfDocument.PageInfo.Builder(595,842,1).create());Canvas c=page.getCanvas();c.drawColor(Color.WHITE);
             Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);ink.setColor(Color.BLACK);ink.setTextSize(7.5f);
             float mm=72f/25.4f;
-            for(int row=0;row<2;row++)for(int col=0;col<2;col++){
-                float left=5*mm+col*100*mm,top=5*mm+row*142.875f*mm;
+            {
+                float left=5*mm,top=5*mm;
                 c.drawText("Instituição: __________________________________",left+6.2f*mm,top+8,ink);
                 c.drawText("Professor(a): _________________________________",left+6.2f*mm,top+17,ink);
                 String title="Avaliação: "+exam;int end=ink.breakText(title,true,87*mm,null);
@@ -117,8 +117,9 @@ public class MainActivity extends Activity {
     private void result(){
         int hits=Grading.correct(key,answers);
         page("Resultado",exam);
-        body.addView(text(String.format(new Locale("pt","BR"),"%.1f / 10",Grading.grade(key,answers)),48));
-        body.addView(text(hits+" acertos em "+key.length+" questões",22));
+        body.addView(text(hits+" acertos de "+key.length+" questões",34));
+        body.addView(text(String.format(new Locale("pt","BR"),"Nota: %.1f / 10",Grading.grade(key,answers)),28));
+        body.addView(text("Resultado automático da leitura pela câmera.",15));
         for(int i=0;i<key.length;i++)body.addView(text(String.format(Locale.ROOT,"%02d",i+1)+"   "+(answers[i]<0?"Em branco":""+(char)('A'+answers[i]))+"   •   Gabarito: "+(char)('A'+key[i])+"   "+(answers[i]==key[i]?"✓":"✗"),16));
         body.addView(text("Leitura automática estável. Respostas em branco valem zero. Confira os detalhes abaixo antes de registrar a nota.",14));
         button("Corrigir outro aluno",this::capture);
