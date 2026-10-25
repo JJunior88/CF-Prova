@@ -2,16 +2,24 @@
 
 App Android para corrigir cartões de respostas a partir de uma **foto tirada dentro do app**, disponível somente para conferência. A foto fica apenas na memória: não é salva na galeria, em arquivo temporário ou enviada para servidores. O app funciona offline.
 
+## Visual e navegação
+
+A versão 0.5.0 traz cartões de etapas, botões de ação destacados e acesso fixo à câmera na tela inicial. O gabarito usa botões A–E com seleção visível; salvar e concluir ficam sempre acessíveis na parte inferior. A câmera tem uma guia visual para enquadrar o cartão, e a conferência reúne foto ampliável, acertos, nota e indicação de acerto/erro por questão. O resultado final inclui uma nota circular e a divisão entre acertos, erros e questões em branco.
+
+<img src="docs/visual/inicio.png" width="240" alt="Tela inicial do CF Prova"/> <img src="docs/visual/gabarito.png" width="240" alt="Seleção de alternativas do gabarito"/> <img src="docs/visual/resultado.png" width="240" alt="Nota e acertos da avaliação"/>
+
+[Prévia da câmera](docs/visual/camera.png) · [Prévia da conferência](docs/visual/conferencia.png). As imagens são renderizações de interface em ambiente Android simulado; a prévia de câmera está sem câmera conectada e a conferência usa um cartão ilustrativo. Foram conferidas larguras de 320 e 360 dp e fonte ampliada a 140%. Isso não substitui os testes físicos da câmera.
+
 ## Como usar
 
 1. Defina o nome e a quantidade de questões (5 a 40).
 2. Edite e salve o gabarito do professor (A–E). As respostas começam em A: confira todas antes de corrigir.
 3. Gere o **Word editável (.docx)** ou o **PDF**: um único cartão no canto superior esquerdo de uma A4, ocupando menos de 1/4 da página. No Word, personalize instituição, professor e avaliação. Imprima em A4, a 100%, preservando marcadores e código.
 4. O aluno preenche uma bolha inteira por questão, com caneta escura.
-5. Toque em **Abrir câmera para fotografar**, permita acesso à câmera e enquadre um cartão v2 inteiro, na vertical, com o quadrado maior no alto à esquerda. Use boa luz; toque na prévia para ajustar o foco.
+5. Toque em **Fotografar cartão**, permita acesso à câmera e enquadre um cartão v2 inteiro, na vertical, com o quadrado maior no alto à esquerda. Use boa luz; toque na prévia para ajustar o foco.
 6. Toque em **Tirar foto**. A tela de conferência mostra a foto, **X acertos de N questões**, a nota e as respostas reconhecidas. Se a foto não permitir uma leitura confiável, o app explica o problema e permite refazer, sem atribuir nota.
 7. Toque na foto para ampliar; use dois dedos para aproximar e arraste. Confira cada resposta com a imagem e com o gabarito. Se necessário, ajuste as alternativas na lista: acertos e nota são atualizados imediatamente.
-8. Use **Descartar e tirar outra foto** para refazer ou **Finalizar e descartar foto** para ver o resultado final sem a imagem. **Descartar foto e sair** cancela a correção.
+8. Use **Refazer foto** para refazer ou **Concluir conferência** para ver o resultado final sem a imagem. **Sair e descartar** cancela a correção.
 9. Para o próximo aluno, toque em **Corrigir outro aluno**.
 
 Respostas em branco valem zero. Marcas fracas ou duplas impedem a leitura automática da foto: corrija o preenchimento ou melhore o enquadramento e refaça. Questões têm o mesmo peso e a nota vai de 0 a 10.

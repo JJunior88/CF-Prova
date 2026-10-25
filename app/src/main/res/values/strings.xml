@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="camera_title">Fotografar cartão</string>
-    <string name="camera_guide">Enquadre um cartão v2 inteiro, na vertical, com o quadrado maior no alto à esquerda. Toque na prévia para focar e depois em Tirar foto.</string>
+    <string name="camera_title">Vamos fotografar?</string>
+    <string name="camera_guide">Deixe os quatro marcadores visíveis e o quadrado maior no alto à esquerda. Toque no cartão para focar.</string>
     <string name="enable_camera">Ativar câmera</string>
     <string name="back">Voltar</string>
     <string name="camera_permission">Permita acesso à câmera. Se o Android não perguntar novamente, ative em Configurações &gt; Aplicativos &gt; CF Prova &gt; Permissões.</string>
@@ -9,18 +9,27 @@
     <string name="photo_error">Não foi possível tirar ou processar a foto. Ajuste o foco e tente novamente.</string>
     <string name="processing_photo">Fotografando e lendo o cartão…</string>
     <string name="take_photo">Tirar foto</string>
-    <string name="review_title">Conferir foto e respostas</string>
+    <string name="review_title">Confira sua correção</string>
     <string name="photo_memory">Foto temporária, apenas na memória: não é salva na galeria nem em arquivo. Ao sair desta tela, ela é descartada.</string>
     <string name="photo_description">Foto do cartão de respostas para conferência</string>
-    <string name="zoom_hint">Toque na foto para ampliar. Na ampliação, use dois dedos para aproximar e arraste para conferir.</string>
+    <string name="zoom_hint">Toque para ampliar. Use dois dedos para aproximar e arraste a foto.</string>
     <string name="photo_unreadable">Não foi possível obter respostas confiáveis desta foto. %1$s. Tire outra foto para corrigir.</string>
     <string name="review_answers">Confira as respostas lidas na foto. Se necessário, ajuste as alternativas abaixo; acertos e nota são atualizados na hora.</string>
     <string name="blank">Em branco</string>
     <string name="question_key">%1$02d • Gabarito: %2$s</string>
-    <string name="retake">Descartar e tirar outra foto</string>
-    <string name="finish_review">Finalizar e descartar foto</string>
-    <string name="discard_exit">Descartar foto e sair</string>
+    <string name="retake">Refazer foto</string>
+    <string name="finish_review">Concluir conferência</string>
+    <string name="discard_exit">Sair e descartar</string>
     <string name="no_result">Leitura não concluída</string>
     <string name="photo_result">Acertos: %1$d / %2$d\nNota: %3$.1f / 10</string>
     <string name="close_photo">Voltar à conferência</string>
+    <string name="frame_label">ENQUADRE UM CARTÃO</string>
+    <string name="camera_privacy">A foto é temporária e não vai para a galeria.</string>
+    <string name="review_summary">RESULTADO DA LEITURA</string>
+    <string name="review_photo">Foto do cartão</string>
+    <string name="zoom_label">AMPLIAR</string>
+    <string name="answers_title">Respostas reconhecidas</string>
+    <string name="answer_description">Resposta lida da questão %1$d</string>
+    <string name="answer_correct">Acerto</string>
+    <string name="answer_wrong">Erro</string>
 </resources>

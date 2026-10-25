@@ -26,7 +26,7 @@ import java.util.concurrent.*;
 public class ScannerActivity extends ComponentActivity {
     private PreviewView preview;
     private TextView hint,summary;
-    private Button shutter;
+    private Button shutter,retryCamera;
     private ImageView reviewImage;
     private Dialog zoom;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -45,20 +45,29 @@ public class ScannerActivity extends ComponentActivity {
         cameraScreen();permission();
     }
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density);}
-    private TextView text(String value,int size){TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(0xff183032);t.setPadding(dp(12),dp(8),dp(12),dp(8));return t;}
+    private TextView text(String value,int size){return AppUi.text(this,value,size,reviewing?AppUi.INK:Color.WHITE,false);}
     private LinearLayout screen(){
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xfff3f7f6);
-        root.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(dp(12),i.getSystemWindowInsetTop(),dp(12),i.getSystemWindowInsetBottom());return i;});
+        LinearLayout root=AppUi.column(this);root.setBackgroundColor(reviewing?AppUi.BG:AppUi.NAVY);
+        root.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(dp(16),i.getSystemWindowInsetTop()+dp(12),dp(16),i.getSystemWindowInsetBottom()+dp(8));return i;});
+        getWindow().getDecorView().setSystemUiVisibility(reviewing?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
+        getWindow().setStatusBarColor(reviewing?AppUi.BG:AppUi.NAVY);getWindow().setNavigationBarColor(reviewing?AppUi.BG:AppUi.NAVY);
         setContentView(root);root.requestApplyInsets();return root;
     }
-    private Button button(LinearLayout root,int label,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setOnClickListener(v->action.run());root.addView(b,new LinearLayout.LayoutParams(-1,dp(52)));return b;}
+    private Button button(LinearLayout root,int label,Runnable action){
+        boolean primary=label==R.string.take_photo||label==R.string.finish_review;String icon=label==R.string.take_photo?"camera":label==R.string.finish_review?"check":null;
+        Button b=AppUi.button(this,getString(label),primary,icon,action);root.addView(b,AppUi.block(this,8));return b;
+    }
     private void cameraScreen(){
-        discardPhoto();reviewing=false;answers=null;capture=null;
-        LinearLayout root=screen();root.addView(text(getString(R.string.camera_title),24));
-        hint=text(getString(R.string.camera_guide),15);root.addView(hint);
-        preview=new PreviewView(this);preview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);preview.setScaleType(PreviewView.ScaleType.FIT_CENTER);root.addView(preview,new LinearLayout.LayoutParams(-1,0,1));
-        shutter=button(root,R.string.take_photo,this::takePhoto);shutter.setEnabled(false);
-        button(root,R.string.enable_camera,this::permission);button(root,R.string.back,this::finish);
+        discardPhoto();reviewing=false;answers=null;capture=null;summary=null;
+        LinearLayout root=screen();LinearLayout top=AppUi.row(this);top.addView(AppUi.badge(this,"02 / FOTOGRAFAR",0xff9ee3d1,0xff244269),new LinearLayout.LayoutParams(0,-2,1));top.addView(AppUi.button(this,getString(R.string.back),false,"back",this::finish));root.addView(top);AppUi.gap(root,16);
+        root.addView(AppUi.text(this,getString(R.string.camera_title),28,Color.WHITE,true));AppUi.gap(root,8);
+        hint=AppUi.text(this,getString(R.string.camera_guide),14,0xffd9e3f4,false);root.addView(hint);AppUi.gap(root,16);
+        FrameLayout stage=new FrameLayout(this);stage.setBackground(AppUi.shape(this,Color.BLACK,24));stage.setClipToOutline(true);LinearLayout.LayoutParams stageSize=new LinearLayout.LayoutParams(-1,0,1);stageSize.bottomMargin=dp(12);root.addView(stage,stageSize);
+        preview=new PreviewView(this);preview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);preview.setScaleType(PreviewView.ScaleType.FIT_CENTER);stage.addView(preview,new FrameLayout.LayoutParams(-1,-1));stage.addView(new AppUi.CaptureGuide(this),new FrameLayout.LayoutParams(-1,-1));
+        TextView guide=AppUi.badge(this,getString(R.string.frame_label),Color.WHITE,0xc0142b4d);FrameLayout.LayoutParams guideSize=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);guideSize.topMargin=dp(12);stage.addView(guide,guideSize);
+        TextView privacy=AppUi.text(this,getString(R.string.camera_privacy),12,0xffc6d8ef,false);privacy.setGravity(Gravity.CENTER);root.addView(privacy);AppUi.gap(root,10);
+        shutter=button(root,R.string.take_photo,this::takePhoto);shutter.setMinHeight(dp(60));shutter.setEnabled(false);
+        retryCamera=button(root,R.string.enable_camera,this::permission);
         if(provider!=null)bindCamera();
     }
     private void permission(){
@@ -85,10 +94,10 @@ public class ScannerActivity extends ComponentActivity {
             capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).setTargetResolution(new Size(1600,1200)).build();
             Camera camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
             preview.setOnTouchListener((v,event)->{if(event.getAction()==MotionEvent.ACTION_UP){v.performClick();try{camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(preview.getMeteringPointFactory().createPoint(event.getX(),event.getY())).build());}catch(IllegalArgumentException ignored){/* Camera is stopping. */}}return true;});
-            shutter.setEnabled(true);
+            shutter.setEnabled(true);retryCamera.setVisibility(View.GONE);
         }catch(Exception e){cameraError();}
     }
-    private void cameraError(){if(provider!=null)provider.unbindAll();capture=null;shutter.setEnabled(false);hint.setText(R.string.camera_error);}
+    private void cameraError(){if(provider!=null)provider.unbindAll();capture=null;shutter.setEnabled(false);retryCamera.setVisibility(View.VISIBLE);hint.setText(R.string.camera_error);}
     private void takePhoto(){
         if(!active||busy||capture==null)return;
         busy=true;shutter.setEnabled(false);hint.setText(R.string.processing_photo);final int token=photo.begin();
@@ -127,33 +136,34 @@ public class ScannerActivity extends ComponentActivity {
     }
     private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;shutter.setEnabled(capture!=null);hint.setText(R.string.photo_error);});}
     private void reviewScreen(String readingHint){
-        LinearLayout root=screen();root.addView(text(getString(R.string.review_title),24));if(exam!=null)root.addView(text(exam,15));
-        ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
-        summary=text("",25);content.addView(summary);updateSummary();
-        content.addView(text(getString(R.string.photo_memory),14));
-        reviewImage=new ImageView(this);reviewImage.setImageBitmap(photo.get());reviewImage.setScaleType(ImageView.ScaleType.FIT_CENTER);reviewImage.setContentDescription(getString(R.string.photo_description));content.addView(reviewImage,new LinearLayout.LayoutParams(-1,dp(360)));reviewImage.setOnClickListener(v->zoomPhoto());
-        content.addView(text(getString(R.string.zoom_hint),14));
-        if(answers==null)content.addView(text(getString(R.string.photo_unreadable,readingHint),16));
+        LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
+        root.addView(AppUi.text(this,getString(R.string.review_title),27,AppUi.INK,true));if(exam!=null){AppUi.gap(root,4);root.addView(AppUi.text(this,exam,14,AppUi.MUTED,false));}AppUi.gap(root,14);
+        ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout content=AppUi.column(this);scroll.addView(content);
+        LinearLayout result=AppUi.hero(this);result.addView(AppUi.text(this,getString(R.string.review_summary),10,0xffa9e8d5,true));AppUi.gap(result,8);summary=AppUi.text(this,"",27,Color.WHITE,true);result.addView(summary);content.addView(result,AppUi.block(this,14));updateSummary();
+        LinearLayout imageCard=AppUi.card(this);LinearLayout caption=AppUi.row(this);caption.addView(AppUi.text(this,getString(R.string.review_photo),17,AppUi.INK,true),new LinearLayout.LayoutParams(0,-2,1));caption.addView(AppUi.badge(this,getString(R.string.zoom_label),AppUi.BLUE,0xffedf1ff));imageCard.addView(caption);AppUi.gap(imageCard,12);
+        reviewImage=new ImageView(this);reviewImage.setImageBitmap(photo.get());reviewImage.setScaleType(ImageView.ScaleType.FIT_CENTER);reviewImage.setContentDescription(getString(R.string.photo_description));reviewImage.setBackground(AppUi.shape(this,0xffeaf0f7,14));reviewImage.setClipToOutline(true);imageCard.addView(reviewImage,new LinearLayout.LayoutParams(-1,dp(320)));reviewImage.setOnClickListener(v->zoomPhoto());AppUi.gap(imageCard,10);imageCard.addView(AppUi.text(this,getString(R.string.zoom_hint),12,AppUi.MUTED,false));content.addView(imageCard,AppUi.block(this,14));
+        if(answers==null){LinearLayout warning=AppUi.card(this);warning.setBackground(AppUi.shape(this,0xfffff2dc,20));warning.addView(AppUi.text(this,getString(R.string.photo_unreadable,readingHint),15,0xff78521f,false));content.addView(warning,AppUi.block(this,12));}
         else{
-            content.addView(text(getString(R.string.review_answers),16));
+            content.addView(AppUi.text(this,getString(R.string.answers_title),20,AppUi.INK,true));AppUi.gap(content,6);content.addView(AppUi.text(this,getString(R.string.review_answers),13,AppUi.MUTED,false));AppUi.gap(content,14);
             String[] choices={"A","B","C","D","E",getString(R.string.blank)};
             for(int i=0;i<answers.length;i++){
-                final int index=i;LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
-                row.addView(text(getString(R.string.question_key,i+1,String.valueOf((char)('A'+key[i]))),16),new LinearLayout.LayoutParams(0,-2,1));
-                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]<0?5:answers[i]);
-                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==5?-1:pos;updateSummary();}}});
-                row.addView(spinner,new LinearLayout.LayoutParams(dp(110),dp(48)));content.addView(row);
+                final int index=i;LinearLayout card=AppUi.card(this);card.setPadding(dp(12),dp(12),dp(12),dp(12));LinearLayout row=AppUi.row(this);LinearLayout label=AppUi.column(this);label.addView(AppUi.text(this,getString(R.string.question_key,i+1,String.valueOf((char)('A'+key[i]))),15,AppUi.INK,true));AppUi.gap(label,6);TextView state=AppUi.badge(this,"",AppUi.TEAL,0xffe8f5ee);answerState(state,index);label.addView(state);row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]<0?5:answers[i]);spinner.setBackground(AppUi.outline(this,0xfff4f7fc,12,AppUi.LINE));spinner.setContentDescription(getString(R.string.answer_description,i+1));
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==5?-1:pos;updateSummary();answerState(state,index);}}});
+                row.addView(spinner,new LinearLayout.LayoutParams(dp(114),dp(52)));card.addView(row);content.addView(card,AppUi.block(this,8));
             }
         }
-        button(root,R.string.retake,this::cameraScreen);
-        if(answers!=null)button(root,R.string.finish_review,()->{int[] result=answers.clone();discardPhoto();setResult(RESULT_OK,new Intent().putExtra("answers",result));finish();});
-        button(root,R.string.discard_exit,this::finish);
+        AppUi.gap(content,10);content.addView(AppUi.text(this,getString(R.string.photo_memory),12,AppUi.MUTED,false));AppUi.gap(content,16);
+        LinearLayout dock=AppUi.column(this);dock.setPadding(0,dp(8),0,0);root.addView(dock);
+        if(answers!=null)button(dock,R.string.finish_review,()->{int[] resultAnswers=answers.clone();discardPhoto();setResult(RESULT_OK,new Intent().putExtra("answers",resultAnswers));finish();});
+        LinearLayout secondary=AppUi.row(this);Button retake=AppUi.button(this,getString(R.string.retake),false,"camera",this::cameraScreen);Button exit=AppUi.button(this,getString(R.string.discard_exit),false,null,this::finish);LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);secondary.addView(retake,half);secondary.addView(exit,new LinearLayout.LayoutParams(0,-2,1));dock.addView(secondary);
     }
+    private void answerState(TextView view,int i){boolean correct=answers[i]==key[i];view.setText(getString(correct?R.string.answer_correct:answers[i]<0?R.string.blank:R.string.answer_wrong));view.setTextColor(correct?AppUi.TEAL:AppUi.MUTED);view.setBackground(AppUi.shape(this,correct?0xffe7f5ee:0xffeef1f7,10));}
     private void updateSummary(){if(summary==null)return;if(answers==null)summary.setText(R.string.no_result);else summary.setText(getString(R.string.photo_result,Grading.correct(key,answers),key.length,Grading.grade(key,answers)));}
     private void zoomPhoto(){
         if(photo.get()==null)return;zoom=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);zoom.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setBackgroundColor(Color.BLACK);
-        PhotoZoom image=new PhotoZoom(this,photo.get());box.addView(image,new LinearLayout.LayoutParams(-1,0,1));button(box,R.string.close_photo,()->{zoom.dismiss();zoom=null;});zoom.setContentView(box);zoom.show();
+        PhotoZoom image=new PhotoZoom(this,photo.get());box.addView(image,new LinearLayout.LayoutParams(-1,0,1));button(box,R.string.close_photo,()->{zoom.dismiss();zoom=null;});box.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(dp(12),i.getSystemWindowInsetTop(),dp(12),i.getSystemWindowInsetBottom());return i;});zoom.setContentView(box);zoom.show();box.requestApplyInsets();
     }
     private void discardPhoto(){if(zoom!=null){zoom.dismiss();zoom=null;}if(reviewImage!=null){reviewImage.setImageDrawable(null);reviewImage=null;}photo.clear();}
     @Override protected void onStart(){super.onStart();active=true;}
