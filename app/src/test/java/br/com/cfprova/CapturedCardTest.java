@@ -5,8 +5,10 @@ import java.io.InputStream;
 import static org.junit.Assert.*;
 
 public class CapturedCardTest {
-    @Test public void readsRealExportRenderedOnWholeA4WithJpegCompressionAndLightingGradient()throws Exception{
-        try(InputStream in=getClass().getResourceAsStream("/quarter-card-20-jpeg.jpg")){
+    @Test public void readsRealExportRenderedOnWholeA4WithJpegCompressionAndLightingGradient()throws Exception{check("/quarter-card-20-jpeg.jpg");}
+    @Test public void readsBottomRightCardWithoutIdentification()throws Exception{check("/lower-right-card-20-jpeg.jpg");}
+    private void check(String resource)throws Exception{
+        try(InputStream in=getClass().getResourceAsStream(resource)){
             assertNotNull(in);
             // Host-JVM decoder: reflection keeps java.desktop APIs out of Android's compile stubs.
             Object image=Class.forName("javax.imageio.ImageIO").getMethod("read",InputStream.class).invoke(null,in);

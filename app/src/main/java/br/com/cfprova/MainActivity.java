@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
         setup.addView(AppUi.badge(this,"A–E  •  Questões com o mesmo peso",AppUi.MUTED,0xfff0f3fa));body.addView(setup,AppUi.block(this,14));
         LinearLayout answer=AppUi.card(this);AppUi.section(answer,"02","Gabarito do professor","Confira a alternativa correta de cada questão antes de começar.");
         action(answer,"Conferir gabarito",false,"check",()->{if(configure())editKey();});body.addView(answer,AppUi.block(this,14));
-        LinearLayout print=AppUi.card(this);AppUi.section(print,"03","Cartão-resposta do aluno","Um cartão-resposta compacto de ¼ de A4. Cabeçalho editável para qualquer instituição.");
+        LinearLayout print=AppUi.card(this);AppUi.section(print,"03","Cartão-resposta do aluno","Só a grade de respostas, sem identificação, no canto inferior direito de ¼ de A4.");
         LinearLayout exports=AppUi.row(this);Button word=AppUi.button(this,"Word",false,"doc",()->{if(configure())word();});Button pdf=AppUi.button(this,"PDF",false,"doc",()->{if(configure())pdf();});
         LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);exports.addView(word,half);exports.addView(pdf,new LinearLayout.LayoutParams(0,-2,1));print.addView(exports);body.addView(print,AppUi.block(this,14));
         LinearLayout tip=AppUi.card(this);tip.setBackground(AppUi.shape(this,0xffe8f5f0,20));tip.addView(AppUi.text(this,"A foto é só para conferir",15,AppUi.TEAL,true));AppUi.gap(tip,5);tip.addView(AppUi.text(this,"Ela fica apenas na memória e é descartada ao sair da conferência.",13,AppUi.TEAL,false));body.addView(tip,AppUi.block(this,8));
@@ -109,16 +109,9 @@ public class MainActivity extends Activity {
         PdfDocument doc=new PdfDocument();
         try {
             PdfDocument.Page page=doc.startPage(new PdfDocument.PageInfo.Builder(595,842,1).create());Canvas c=page.getCanvas();c.drawColor(Color.WHITE);
-            Paint ink=new Paint(Paint.ANTI_ALIAS_FLAG);ink.setColor(Color.BLACK);ink.setTextSize(7.5f);
             float mm=72f/25.4f;
-            {
-                float left=5*mm,top=5*mm;
-                c.drawText("Instituição: __________________________________",left+6.2f*mm,top+8,ink);
-                c.drawText("Professor(a): _________________________________",left+6.2f*mm,top+17,ink);
-                String title="Avaliação: "+exam;int end=ink.breakText(title,true,87*mm,null);
-                c.drawText(title.substring(0,end),left+6.2f*mm,top+26,ink);
-                c.save();c.translate(left+6.5f*mm,top+28);c.scale(87*mm/600,87*mm/600);CardDrawing.draw(c,key.length);c.restore();
-            }
+            float left=595-5*mm-87*mm,top=842-5*mm-130.5f*mm;
+            c.save();c.translate(left,top);c.scale(87*mm/600,87*mm/600);CardDrawing.draw(c,key.length);c.restore();
             doc.finishPage(page);try(FileOutputStream out=new FileOutputStream(new File(getCacheDir(),"cartao.pdf"))){doc.writeTo(out);}
             share("cartao.pdf","application/pdf");
         }catch(Exception e){message("Não foi possível gerar ou compartilhar o PDF: "+e.getMessage());}finally{doc.close();}

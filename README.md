@@ -13,7 +13,7 @@ A interface mantém cartões de etapas, botões de ação destacados e acesso fi
 ## Como usar
 
 1. Defina nome e quantidade de questões (5 a 40) e confira todas as alternativas do gabarito do professor.
-2. Gere o **Word editável (.docx)** ou **PDF** do **cartão-resposta v2**: um cartão no canto superior esquerdo de uma A4, ocupando 1/4 da página. Personalize o cabeçalho sem alterar os marcadores, o código ou as bolhas. Cartões v2 anteriores continuam compatíveis.
+2. Gere o **Word editável (.docx)** ou **PDF** do **cartão-resposta v2**: um cartão no **canto inferior direito** de uma A4, ocupando menos de 1/4 da página. O modelo contém apenas números das questões, alternativas A–E e os marcadores/código necessários à leitura, sem identificação. Preserve esses elementos. Cartões v2 anteriores continuam compatíveis.
 3. Imprima em A4, a 100%. O aluno deve preencher uma bolha inteira por questão com caneta escura.
 4. Toque em **Ler cartão-resposta**, permita a câmera e enquadre um cartão com os quatro marcadores visíveis. O leitor procura o cartão na imagem, sem exigir que ele fique no centro ou alinhado aos cantos da foto. Pode reconhecer o cartão girado; fotografar de frente, sem dobrar a folha, continua dando mais nitidez.
 5. Se precisar, toque em **Flash desligado** para ligar a luz contínua do flash. Ela ilumina a prévia e a foto. Toque em **Flash ligado** para desligar, inclusive se houver reflexos. Aparelhos sem esse recurso mostram **Sem flash**.
@@ -64,12 +64,12 @@ Os testes incluem cartões deslocados, invertidos, em paisagem, perspectiva, som
 
 No aparelho: use cinco questões com quatro respostas corretas e uma errada. Com **Conferência imediata** ligada, aponte, aguarde a captura e confira **4 acertos de 5**, nota **8,0**. Repita com captura manual, cartão no canto da foto, girado e iluminação reduzida com a luz ligada/desligada. Confira que a luz apaga ao sair ou abrir a conferência e que nenhuma foto aparece na galeria. Teste também recusa de permissão, segundo plano durante captura, ampliação, refazer, ajustes de resposta, cartão incompatível e quantidade de questões divergente. A validação física no Android ainda precisa ser feita.
 
-## Modelo compacto para qualquer instituição
+## Modelo compacto, sem identificação (0.6.1)
 
-A exportação mantém **um cartão de 1/4 de página** em uma A4, no canto superior esquerdo; o restante fica em branco. A área óptica mede **87 × 130,5 mm**, com cabeçalho editável acima, dentro de aproximadamente **100 × 142,9 mm**. Cabe em um quarto da A4 (105 × 148,5 mm), com margens de impressão. O modelo não tem instituição fixa.
+O Word e o PDF exportam **um único cartão-resposta no canto inferior direito da A4**, com aproximadamente 5 mm de margem à direita e embaixo. O cartão mede **87 × 130,5 mm**, cabendo em 1/4 da A4 (105 × 148,5 mm); o restante da página fica em branco.
 
-[Baixar modelo Word de 20 questões](modelos/cartao-20-questoes.docx). Para outra quantidade, use a exportação do aplicativo (5 a 40). É Word moderno `.docx`.
+O impresso contém **somente a grade de respostas** — números e alternativas A–E — e os quadrados/código para a leitura automática. Não há nome, aluno, turma, data, instituição, professor, título da avaliação, logotipo ou rodapé. O nome da prova continua no app para organizar a correção, mas não é incluído no documento.
 
-Edite os três campos do cabeçalho, mantendo as três linhas. A grade óptica é uma imagem fixa; preserve bolhas, marcadores, código e proporções. O aluno preenche nome, turma e data à mão. Para alterar a quantidade de questões, gere o cartão novamente. O código identifica formato e quantidade, não o nome da prova: escolha o gabarito correto no app.
+[Baixar Word de 20 questões](modelos/cartao-20-questoes.docx) · [Baixar PDF de 20 questões](modelos/cartao-20-questoes.pdf). Para outra quantidade, gere pelo app (5 a 40). O Word mantém o cartão como imagem com proporções preservadas, posicionado em relação à página; não recorte nem distorça os marcadores, código ou bolhas.
 
-Imprima em A4, a 100%, e aproxime a câmera de um cartão por vez. Especialmente com 40 questões, valide a impressão e o foco. O leitor continua usando a geometria v2; a mudança para captura por botão não exige trocar cartões v2 existentes. Não há contas, histórico de alunos, pesos individuais ou exportação de notas.
+As letras ficaram maiores e o contorno das bolhas um pouco mais forte. As posições ópticas continuam iguais às do formato v2, portanto cartões v2 já impressos continuam compatíveis. Imprima em A4 a 100% e fotografe um cartão por vez, com todos os marcadores visíveis. A identificação do aluno deve ser controlada separadamente pelo professor. O app não tem contas, histórico de alunos, pesos individuais ou exportação de notas.
