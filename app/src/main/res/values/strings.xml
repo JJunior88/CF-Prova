@@ -1,19 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="camera_title">Vamos fotografar?</string>
-    <string name="camera_guide">Deixe os quatro marcadores visíveis e o quadrado maior no alto à esquerda. Toque no cartão para focar.</string>
+    <string name="camera_title">Ler cartão-resposta</string>
+    <string name="camera_guide">Mostre os quatro marcadores do cartão-resposta. Toque para focar e use a luz quando necessário.</string>
     <string name="enable_camera">Ativar câmera</string>
     <string name="back">Voltar</string>
     <string name="camera_permission">Permita acesso à câmera. Se o Android não perguntar novamente, ative em Configurações &gt; Aplicativos &gt; CF Prova &gt; Permissões.</string>
     <string name="camera_error">Não foi possível iniciar a câmera traseira. Feche outros aplicativos de câmera e toque em Ativar câmera.</string>
-    <string name="photo_error">Não foi possível tirar ou processar a foto. Ajuste o foco e tente novamente.</string>
-    <string name="processing_photo">Fotografando e lendo o cartão…</string>
+    <string name="photo_error">Não foi possível processar a foto. Toque para focar, use a luz e tente novamente.</string>
+    <string name="processing_photo">Fotografando o cartão-resposta e conferindo…</string>
     <string name="take_photo">Tirar foto</string>
     <string name="review_title">Confira sua correção</string>
     <string name="photo_memory">Foto temporária, apenas na memória: não é salva na galeria nem em arquivo. Ao sair desta tela, ela é descartada.</string>
-    <string name="photo_description">Foto do cartão de respostas para conferência</string>
+    <string name="photo_description">Foto do cartão-resposta para conferência</string>
     <string name="zoom_hint">Toque para ampliar. Use dois dedos para aproximar e arraste a foto.</string>
-    <string name="photo_unreadable">Não foi possível obter respostas confiáveis desta foto. %1$s. Tire outra foto para corrigir.</string>
+    <string name="photo_unreadable">%1$s</string>
     <string name="review_answers">Confira as respostas lidas na foto. Se necessário, ajuste as alternativas abaixo; acertos e nota são atualizados na hora.</string>
     <string name="blank">Em branco</string>
     <string name="question_key">%1$02d • Gabarito: %2$s</string>
@@ -23,13 +23,22 @@
     <string name="no_result">Leitura não concluída</string>
     <string name="photo_result">Acertos: %1$d / %2$d\nNota: %3$.1f / 10</string>
     <string name="close_photo">Voltar à conferência</string>
-    <string name="frame_label">ENQUADRE UM CARTÃO</string>
+    <string name="frame_label">ENQUADRE UM CARTÃO-RESPOSTA</string>
     <string name="camera_privacy">A foto é temporária e não vai para a galeria.</string>
     <string name="review_summary">RESULTADO DA LEITURA</string>
-    <string name="review_photo">Foto do cartão</string>
+    <string name="review_photo">Foto do cartão-resposta</string>
     <string name="zoom_label">AMPLIAR</string>
     <string name="answers_title">Respostas reconhecidas</string>
     <string name="answer_description">Resposta lida da questão %1$d</string>
     <string name="answer_correct">Acerto</string>
     <string name="answer_wrong">Erro</string>
+    <string name="immediate_mode">Conferência imediata</string>
+    <string name="immediate_description">Ativar conferência imediata: ao reconhecer respostas estáveis, fotografa e abre a conferência automaticamente.</string>
+    <string name="immediate_guide">Aponte para o cartão-resposta. Ao estabilizar a leitura, a foto de conferência é feita automaticamente. Ou toque em Tirar foto.</string>
+    <string name="immediate_unavailable">Este aparelho precisa de captura por botão. Toque em Tirar foto; acertos e nota aparecerão na conferência.</string>
+    <string name="immediate_result">Acertos: %1$d / %2$d • Nota: %3$.1f / 10. Mantenha firme…</string>
+    <string name="flash_off">Flash desligado</string>
+    <string name="flash_on">Flash ligado</string>
+    <string name="flash_unavailable">Sem flash</string>
+    <string name="flash_error">Não foi possível ativar a luz. Verifique a câmera e tente novamente.</string>
 </resources>

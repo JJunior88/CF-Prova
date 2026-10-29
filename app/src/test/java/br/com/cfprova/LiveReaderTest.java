@@ -20,6 +20,29 @@ public class LiveReaderTest {
             if(black)pixels[y*width+x]=(byte)ink;
         }return pixels;
     }
+    private byte[] place(byte[] card,int sourceWidth,int sourceHeight,int width,int height,double scale,int left,int top){
+        byte[] page=new byte[width*height];Arrays.fill(page,(byte)250);
+        for(int y=0;y<sourceHeight*scale;y++)for(int x=0;x<sourceWidth*scale;x++){
+            int dx=x+left,dy=y+top;if(dx>=0&&dx<width&&dy>=0&&dy<height)page[dy*width+dx]=card[Math.min(sourceHeight-1,(int)(y/scale))*sourceWidth+Math.min(sourceWidth-1,(int)(x/scale))];
+        }return page;
+    }
+    @Test public void readsQuarterPageCardInUpperLeftOfWholeA4Photo(){
+        int[] a={0,1,2,3,4};byte[] page=place(card(5,a,0,true,250,20),800,1100,1200,1700,.75,0,0);
+        LiveReader.Reading r=new LiveReader().read(page,1200,1700,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);
+    }
+    @Test public void readsOffCenterCard(){
+        int[] a={4,3,2,1,0};byte[] page=place(card(5,a,0,true,250,20),800,1100,1500,1800,.85,700,700);
+        LiveReader.Reading r=new LiveReader().read(page,1500,1800,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);
+    }
+    private byte[] rotated(byte[] pixels,int width,int height,int turns){
+        if(turns==0)return pixels;
+        byte[] next=new byte[pixels.length];for(int y=0;y<height;y++)for(int x=0;x<width;x++)next[x*height+height-1-y]=pixels[y*width+x];
+        return rotated(next,height,width,turns-1);
+    }
+    @Test public void readsUpsideDownAndLandscapeCards(){int[] a={0,1,2,3,4};byte[] p=card(5,a,0,true,250,20);for(int turns=1;turns<=3;turns++){LiveReader.Reading r=new LiveReader().read(rotated(p,800,1100,turns),turns%2==1?1100:800,turns%2==1?800:1100,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}}
+    @Test public void readsCardWithUnevenLighting(){int[] a={0,1,2,3,4};byte[] p=card(5,a,0,true,250,20);for(int y=0;y<1100;y++)for(int x=0;x<800;x++)p[y*800+x]=(byte)(int)((p[y*800+x]&255)*(.5+.5*x/800.0));LiveReader.Reading r=new LiveReader().read(p,800,1100,5);assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);}
+    @Test public void rejectsTwoCardsRatherThanChoosingAnArbitraryStudent(){int[] a={0,1,2,3,4};byte[] card=card(5,a,0,true,250,20),page=place(card,800,1100,2400,1700,.75,0,0),right=place(card,800,1100,2400,1700,.75,1200,0);for(int i=0;i<page.length;i++)page[i]=(byte)Math.min(page[i]&255,right[i]&255);LiveReader.Reading r=new LiveReader().read(page,2400,1700,5);assertNull(r.answers);assertTrue(r.hint.contains("mais de um"));}
+    @Test public void missingMarkerCannotProduceGrade(){int[] a={0,1,2,3,4};byte[] p=card(5,a,0,true,250,20);for(int y=945;y<=975;y++)for(int x=645;x<=675;x++)p[y*800+x]=(byte)250;assertNull(new LiveReader().read(p,800,1100,5).answers);}
     @Test public void capturedPhotoAutomaticallyCountsCorrectAnswers(){
         int[] key={0,1,2,3,4};
         LiveReader.Reading reading=new LiveReader().read(card(5,new int[]{0,1,2,3,0},0,true,250,20),800,1100,5);

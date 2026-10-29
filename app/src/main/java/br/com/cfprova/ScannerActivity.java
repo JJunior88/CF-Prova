@@ -26,14 +26,22 @@ import java.util.concurrent.*;
 public class ScannerActivity extends ComponentActivity {
     private PreviewView preview;
     private TextView hint,summary;
-    private Button shutter,retryCamera;
+    private Button shutter,retryCamera,flashButton;
+    private Switch immediate;
+    private Camera camera;
+    private final ReadingConsensus consensus=new ReadingConsensus();
+    private volatile boolean immediateEnabled=true;
+    private volatile int previewCycle;
+    private long lastAnalysis;
+    private boolean lightOn;
     private ImageView reviewImage;
     private Dialog zoom;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final TransientPhoto<Bitmap> photo=new TransientPhoto<>(Bitmap::recycle);
     private ProcessCameraProvider provider;
     private ImageCapture capture;
-    private boolean active,busy,starting,reviewing;
+    private volatile boolean active,busy,reviewing;
+    private boolean starting;
     private int[] key,answers;
     private String exam;
     @Override public void onCreate(Bundle state){
@@ -58,14 +66,19 @@ public class ScannerActivity extends ComponentActivity {
         Button b=AppUi.button(this,getString(label),primary,icon,action);root.addView(b,AppUi.block(this,8));return b;
     }
     private void cameraScreen(){
-        discardPhoto();reviewing=false;answers=null;capture=null;summary=null;
-        LinearLayout root=screen();LinearLayout top=AppUi.row(this);top.addView(AppUi.badge(this,"02 / FOTOGRAFAR",0xff9ee3d1,0xff244269),new LinearLayout.LayoutParams(0,-2,1));top.addView(AppUi.button(this,getString(R.string.back),false,"back",this::finish));root.addView(top);AppUi.gap(root,16);
+        discardPhoto();stopLight();consensus.reset();previewCycle++;reviewing=false;answers=null;capture=null;summary=null;
+        LinearLayout root=screen();LinearLayout top=AppUi.row(this);top.addView(AppUi.badge(this,"02 / LEITURA",0xff9ee3d1,0xff244269),new LinearLayout.LayoutParams(0,-2,1));top.addView(AppUi.button(this,getString(R.string.back),false,"back",this::finish));root.addView(top);AppUi.gap(root,16);
         root.addView(AppUi.text(this,getString(R.string.camera_title),28,Color.WHITE,true));AppUi.gap(root,8);
         hint=AppUi.text(this,getString(R.string.camera_guide),14,0xffd9e3f4,false);root.addView(hint);AppUi.gap(root,16);
         FrameLayout stage=new FrameLayout(this);stage.setBackground(AppUi.shape(this,Color.BLACK,24));stage.setClipToOutline(true);LinearLayout.LayoutParams stageSize=new LinearLayout.LayoutParams(-1,0,1);stageSize.bottomMargin=dp(12);root.addView(stage,stageSize);
         preview=new PreviewView(this);preview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);preview.setScaleType(PreviewView.ScaleType.FIT_CENTER);stage.addView(preview,new FrameLayout.LayoutParams(-1,-1));stage.addView(new AppUi.CaptureGuide(this),new FrameLayout.LayoutParams(-1,-1));
         TextView guide=AppUi.badge(this,getString(R.string.frame_label),Color.WHITE,0xc0142b4d);FrameLayout.LayoutParams guideSize=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);guideSize.topMargin=dp(12);stage.addView(guide,guideSize);
-        TextView privacy=AppUi.text(this,getString(R.string.camera_privacy),12,0xffc6d8ef,false);privacy.setGravity(Gravity.CENTER);root.addView(privacy);AppUi.gap(root,10);
+        TextView privacy=AppUi.text(this,getString(R.string.camera_privacy),12,0xffc6d8ef,false);privacy.setGravity(Gravity.CENTER);root.addView(privacy);AppUi.gap(root,8);
+        LinearLayout controls=AppUi.row(this);
+        immediate=new Switch(this);immediate.setText(R.string.immediate_mode);immediate.setTextColor(Color.WHITE);immediate.setTextSize(13);immediate.setMinHeight(dp(48));immediate.setChecked(immediateEnabled);immediate.setContentDescription(getString(R.string.immediate_description));
+        immediate.setOnCheckedChangeListener((v,enabled)->{immediateEnabled=enabled;previewCycle++;consensus.reset();hint.setText(enabled?R.string.immediate_guide:R.string.camera_guide);});
+        controls.addView(immediate,new LinearLayout.LayoutParams(0,-2,1));
+        flashButton=AppUi.button(this,getString(R.string.flash_off),false,null,this::toggleLight);flashButton.setEnabled(false);controls.addView(flashButton);root.addView(controls);AppUi.gap(root,8);
         shutter=button(root,R.string.take_photo,this::takePhoto);shutter.setMinHeight(dp(60));shutter.setEnabled(false);
         retryCamera=button(root,R.string.enable_camera,this::permission);
         if(provider!=null)bindCamera();
@@ -90,34 +103,62 @@ public class ScannerActivity extends ComponentActivity {
     private void bindCamera(){
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED)return;
         try{
-            provider.unbindAll();Preview view=new Preview.Builder().build();view.setSurfaceProvider(preview.getSurfaceProvider());
-            capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).setTargetResolution(new Size(1600,1200)).build();
-            Camera camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
+            stopLight();consensus.reset();previewCycle++;provider.unbindAll();
+            Preview view=new Preview.Builder().build();view.setSurfaceProvider(preview.getSurfaceProvider());
+            capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).setTargetResolution(new Size(1920,1440)).setJpegQuality(95).setFlashMode(ImageCapture.FLASH_MODE_OFF).build();
+            ImageAnalysis analysis=new ImageAnalysis.Builder().setTargetResolution(new Size(1280,960)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
+            analysis.setAnalyzer(worker,this::analyzePreview);
+            try{camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture,analysis);}
+            catch(IllegalArgumentException unsupported){
+                // Some older camera implementations cannot run three use cases simultaneously.
+                provider.unbindAll();analysis.clearAnalyzer();camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
+                immediateEnabled=false;immediate.setChecked(false);immediate.setEnabled(false);hint.setText(R.string.immediate_unavailable);
+            }
+            flashButton.setEnabled(camera.getCameraInfo().hasFlashUnit());flashButton.setText(camera.getCameraInfo().hasFlashUnit()?R.string.flash_off:R.string.flash_unavailable);
             preview.setOnTouchListener((v,event)->{if(event.getAction()==MotionEvent.ACTION_UP){v.performClick();try{camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(preview.getMeteringPointFactory().createPoint(event.getX(),event.getY())).build());}catch(IllegalArgumentException ignored){/* Camera is stopping. */}}return true;});
-            shutter.setEnabled(true);retryCamera.setVisibility(View.GONE);
+            shutter.setEnabled(true);retryCamera.setVisibility(View.GONE);if(immediateEnabled)hint.setText(R.string.immediate_guide);
         }catch(Exception e){cameraError();}
     }
-    private void cameraError(){if(provider!=null)provider.unbindAll();capture=null;shutter.setEnabled(false);retryCamera.setVisibility(View.VISIBLE);hint.setText(R.string.camera_error);}
+    private void toggleLight(){
+        if(camera==null||busy||!camera.getCameraInfo().hasFlashUnit())return;
+        boolean requested=!lightOn;lightOn=requested;int cycle=++previewCycle;consensus.reset();flashButton.setText(requested?R.string.flash_on:R.string.flash_off);
+        ListenableFuture<Void> change=camera.getCameraControl().enableTorch(requested);
+        change.addListener(()->{if(cycle!=previewCycle||isFinishing())return;try{change.get();}catch(Exception e){lightOn=false;flashButton.setText(R.string.flash_off);hint.setText(R.string.flash_error);}},ContextCompat.getMainExecutor(this));
+    }
+    private void stopLight(){
+        lightOn=false;if(camera!=null&&camera.getCameraInfo().hasFlashUnit())camera.getCameraControl().enableTorch(false);
+        if(flashButton!=null)flashButton.setText(R.string.flash_off);
+    }
+    private void analyzePreview(ImageProxy image){
+        try{
+            long now=SystemClock.elapsedRealtime();if(!active||busy||reviewing||!immediateEnabled||now-lastAnalysis<300)return;lastAnalysis=now;int cycle=previewCycle;
+            ImageProxy.PlaneProxy plane=image.getPlanes()[0];LumaFrame frame=LumaFrame.from(plane.getBuffer(),image.getWidth(),image.getHeight(),plane.getRowStride(),plane.getPixelStride(),image.getImageInfo().getRotationDegrees(),1280);
+            LiveReader.Reading reading=new LiveReader().read(frame.pixels,frame.width,frame.height,key.length);int[] stable=consensus.accept(reading.answers,now);
+            runOnUiThread(()->{
+                if(!active||busy||reviewing||!immediateEnabled||cycle!=previewCycle||isFinishing())return;
+                if(reading.answers==null)hint.setText(reading.hint);
+                else hint.setText(getString(R.string.immediate_result,Grading.correct(key,reading.answers),key.length,Grading.grade(key,reading.answers)));
+                if(stable!=null)takePhoto();
+            });
+        }catch(RuntimeException e){consensus.reset();}
+        finally{image.close();}
+    }
+    private void cameraError(){stopLight();consensus.reset();previewCycle++;if(provider!=null)provider.unbindAll();camera=null;capture=null;shutter.setEnabled(false);flashButton.setEnabled(false);retryCamera.setVisibility(View.VISIBLE);hint.setText(R.string.camera_error);}
     private void takePhoto(){
         if(!active||busy||capture==null)return;
-        busy=true;shutter.setEnabled(false);hint.setText(R.string.processing_photo);final int token=photo.begin();
+        busy=true;previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);final int token=photo.begin();
         // The in-memory callback has no OutputFileOptions, MediaStore or file URI.
         capture.takePicture(worker,new ImageCapture.OnImageCapturedCallback(){
             @Override public void onCaptureSuccess(ImageProxy image){
                 Bitmap decoded=null;
                 try{
-                    ByteBuffer buffer=image.getPlanes()[0].getBuffer();byte[] jpeg=new byte[buffer.remaining()];buffer.get(jpeg);
-                    BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);
-                    options.inSampleSize=1;while(Math.max(options.outWidth,options.outHeight)/options.inSampleSize>2000)options.inSampleSize*=2;
-                    options.inJustDecodeBounds=false;decoded=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);
-                    if(decoded==null)throw new IllegalArgumentException("Invalid camera JPEG");
-                    int rotation=image.getImageInfo().getRotationDegrees();if(rotation!=0){Matrix m=new Matrix();m.setRotate(rotation);Bitmap upright=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),m,true);if(upright!=decoded)decoded.recycle();decoded=upright;}
+                    decoded=decodePhoto(image);
                     LiveReader.Reading reading=readPhoto(decoded);Bitmap ready=decoded;decoded=null;
                     runOnUiThread(()->{
                         if(!active||isFinishing()||isDestroyed()){ready.recycle();return;}
                         if(!photo.accept(token,ready))return;
                         busy=false;answers=reading.answers==null?null:reading.answers.clone();reviewing=true;
-                        if(provider!=null)provider.unbindAll();reviewScreen(reading.hint);
+                        stopLight();if(provider!=null)provider.unbindAll();reviewScreen(reading.hint);
                     });
                 }catch(RuntimeException e){if(decoded!=null)decoded.recycle();captureFailed(token);}
                 finally{image.close();}
@@ -125,8 +166,19 @@ public class ScannerActivity extends ComponentActivity {
             @Override public void onError(ImageCaptureException e){captureFailed(token);}
         });
     }
+    private Bitmap decodePhoto(ImageProxy image){
+        if(image.getFormat()==android.graphics.ImageFormat.YUV_420_888){
+            ImageProxy.PlaneProxy plane=image.getPlanes()[0];LumaFrame frame=LumaFrame.from(plane.getBuffer(),image.getWidth(),image.getHeight(),plane.getRowStride(),plane.getPixelStride(),image.getImageInfo().getRotationDegrees(),2000);
+            int[] colors=new int[frame.pixels.length];for(int i=0;i<colors.length;i++){int y=frame.pixels[i]&255;colors[i]=Color.rgb(y,y,y);}return Bitmap.createBitmap(colors,frame.width,frame.height,Bitmap.Config.ARGB_8888);
+        }
+        ByteBuffer buffer=image.getPlanes()[0].getBuffer();byte[] jpeg=new byte[buffer.remaining()];buffer.get(jpeg);
+        BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);
+        options.inSampleSize=1;while(Math.max(options.outWidth,options.outHeight)/options.inSampleSize>2400)options.inSampleSize*=2;
+        options.inJustDecodeBounds=false;Bitmap decoded=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);if(decoded==null)throw new IllegalArgumentException("Invalid camera JPEG");
+        int rotation=image.getImageInfo().getRotationDegrees();if(rotation!=0){Matrix m=new Matrix();m.setRotate(rotation);Bitmap upright=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),m,true);if(upright!=decoded)decoded.recycle();decoded=upright;}return decoded;
+    }
     private LiveReader.Reading readPhoto(Bitmap image){
-        double scale=Math.min(1,1280.0/Math.max(image.getWidth(),image.getHeight()));
+        double scale=Math.min(1,1800.0/Math.max(image.getWidth(),image.getHeight()));
         Bitmap small=Bitmap.createScaledBitmap(image,Math.max(1,(int)(image.getWidth()*scale)),Math.max(1,(int)(image.getHeight()*scale)),true);
         try{
             int w=small.getWidth(),h=small.getHeight();int[] colors=new int[w*h];small.getPixels(colors,0,w,0,0,w,h);byte[] luma=new byte[colors.length];
@@ -134,7 +186,7 @@ public class ScannerActivity extends ComponentActivity {
             return new LiveReader().read(luma,w,h,key.length);
         }finally{if(small!=image)small.recycle();}
     }
-    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;shutter.setEnabled(capture!=null);hint.setText(R.string.photo_error);});}
+    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;immediate.setChecked(false);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
     private void reviewScreen(String readingHint){
         LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
         root.addView(AppUi.text(this,getString(R.string.review_title),27,AppUi.INK,true));if(exam!=null){AppUi.gap(root,4);root.addView(AppUi.text(this,exam,14,AppUi.MUTED,false));}AppUi.gap(root,14);
@@ -167,8 +219,8 @@ public class ScannerActivity extends ComponentActivity {
     }
     private void discardPhoto(){if(zoom!=null){zoom.dismiss();zoom=null;}if(reviewImage!=null){reviewImage.setImageDrawable(null);reviewImage=null;}photo.clear();}
     @Override protected void onStart(){super.onStart();active=true;}
-    @Override protected void onStop(){active=false;boolean discardAndExit=busy||reviewing;busy=false;discardPhoto();if(discardAndExit)finish();super.onStop();}
-    @Override protected void onDestroy(){discardPhoto();if(provider!=null)provider.unbindAll();worker.shutdown();super.onDestroy();}
+    @Override protected void onStop(){active=false;previewCycle++;consensus.reset();stopLight();boolean discardAndExit=busy||reviewing;busy=false;discardPhoto();if(discardAndExit)finish();super.onStop();}
+    @Override protected void onDestroy(){stopLight();discardPhoto();if(provider!=null)provider.unbindAll();worker.shutdown();super.onDestroy();}
     private static final class PhotoZoom extends View{
         private final Bitmap bitmap;private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);private final ScaleGestureDetector pinch;private float scale=1,panX,panY,lastX,lastY;
         PhotoZoom(Context context,Bitmap bitmap){super(context);this.bitmap=bitmap;setContentDescription(context.getString(R.string.photo_description));pinch=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener(){@Override public boolean onScale(ScaleGestureDetector d){scale=Math.max(1,Math.min(6,scale*d.getScaleFactor()));invalidate();return true;}});}

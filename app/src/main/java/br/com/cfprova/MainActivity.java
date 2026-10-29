@@ -55,18 +55,18 @@ public class MainActivity extends Activity {
         currentPage="home";page("Sua próxima correção","");
         LinearLayout hero=AppUi.hero(this);hero.addView(AppUi.text(this,"MENOS PAPELADA. MAIS TEMPO.",10,0xffaddfdc,true));AppUi.gap(hero,12);
         hero.addView(AppUi.text(this,"Sua próxima correção\ncomeça aqui.",29,Color.WHITE,true));AppUi.gap(hero,10);
-        hero.addView(AppUi.text(this,"Prepare a prova, fotografe o cartão e confira os acertos.",14,0xffdae5f8,false));AppUi.gap(hero,16);
+        hero.addView(AppUi.text(this,"Prepare a prova, leia o cartão-resposta e confira os acertos.",14,0xffdae5f8,false));AppUi.gap(hero,16);
         hero.addView(AppUi.badge(this,"01  Prepare    →    02  Fotografe    →    03  Confira",Color.WHITE,0xff345485));body.addView(hero,AppUi.block(this,18));
         LinearLayout setup=AppUi.card(this);AppUi.section(setup,"01","Sua avaliação","Um gabarito por vez, do seu jeito.");
         title=field(setup,"NOME DA PROVA",exam,false);count=field(setup,"QUESTÕES · DE 5 A 40",""+key.length,true);
         setup.addView(AppUi.badge(this,"A–E  •  Questões com o mesmo peso",AppUi.MUTED,0xfff0f3fa));body.addView(setup,AppUi.block(this,14));
         LinearLayout answer=AppUi.card(this);AppUi.section(answer,"02","Gabarito do professor","Confira a alternativa correta de cada questão antes de começar.");
         action(answer,"Conferir gabarito",false,"check",()->{if(configure())editKey();});body.addView(answer,AppUi.block(this,14));
-        LinearLayout print=AppUi.card(this);AppUi.section(print,"03","Cartão para o aluno","Um cartão compacto de ¼ de A4. Cabeçalho editável para qualquer instituição.");
+        LinearLayout print=AppUi.card(this);AppUi.section(print,"03","Cartão-resposta do aluno","Um cartão-resposta compacto de ¼ de A4. Cabeçalho editável para qualquer instituição.");
         LinearLayout exports=AppUi.row(this);Button word=AppUi.button(this,"Word",false,"doc",()->{if(configure())word();});Button pdf=AppUi.button(this,"PDF",false,"doc",()->{if(configure())pdf();});
         LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);exports.addView(word,half);exports.addView(pdf,new LinearLayout.LayoutParams(0,-2,1));print.addView(exports);body.addView(print,AppUi.block(this,14));
         LinearLayout tip=AppUi.card(this);tip.setBackground(AppUi.shape(this,0xffe8f5f0,20));tip.addView(AppUi.text(this,"A foto é só para conferir",15,AppUi.TEAL,true));AppUi.gap(tip,5);tip.addView(AppUi.text(this,"Ela fica apenas na memória e é descartada ao sair da conferência.",13,AppUi.TEAL,false));body.addView(tip,AppUi.block(this,8));
-        action(footer,"Fotografar cartão",true,"camera",()->{if(configure())capture();});
+        action(footer,"Ler cartão-resposta",true,"camera",()->{if(configure())capture();});
     }
     private boolean configure(){
         try {int n=Integer.parseInt(count.getText().toString());if(n<5||n>40)throw new NumberFormatException();
@@ -93,8 +93,8 @@ public class MainActivity extends Activity {
     }
     private void share(String file,String type){
         Intent send=new Intent(Intent.ACTION_SEND).setType(type).putExtra(Intent.EXTRA_STREAM,uri(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        send.setClipData(ClipData.newRawUri("Cartão de respostas",uri(file)));
-        startActivity(Intent.createChooser(send,"Salvar ou compartilhar cartão"));
+        send.setClipData(ClipData.newRawUri("Cartão-resposta",uri(file)));
+        startActivity(Intent.createChooser(send,"Salvar ou compartilhar cartão-resposta"));
     }
     private void word(){
         try {
