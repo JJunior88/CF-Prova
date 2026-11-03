@@ -25,7 +25,9 @@ import java.util.concurrent.*;
 
 public class ScannerActivity extends ComponentActivity {
     private PreviewView preview;
-    private TextView hint,summary;
+    private TextView hint,summary,readingStatus;
+    private ProgressBar readingProgress;
+    private AppUi.CaptureGuide captureGuide;
     private Button shutter,retryCamera,flashButton;
     private Switch immediate;
     private Camera camera;
@@ -71,12 +73,14 @@ public class ScannerActivity extends ComponentActivity {
         root.addView(AppUi.text(this,getString(R.string.camera_title),28,Color.WHITE,true));AppUi.gap(root,8);
         hint=AppUi.text(this,getString(R.string.camera_guide),14,0xffd9e3f4,false);root.addView(hint);AppUi.gap(root,16);
         FrameLayout stage=new FrameLayout(this);stage.setBackground(AppUi.shape(this,Color.BLACK,24));stage.setClipToOutline(true);LinearLayout.LayoutParams stageSize=new LinearLayout.LayoutParams(-1,0,1);stageSize.bottomMargin=dp(12);root.addView(stage,stageSize);
-        preview=new PreviewView(this);preview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);preview.setScaleType(PreviewView.ScaleType.FIT_CENTER);stage.addView(preview,new FrameLayout.LayoutParams(-1,-1));stage.addView(new AppUi.CaptureGuide(this),new FrameLayout.LayoutParams(-1,-1));
-        TextView guide=AppUi.badge(this,getString(R.string.frame_label),Color.WHITE,0xc0142b4d);FrameLayout.LayoutParams guideSize=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);guideSize.topMargin=dp(12);stage.addView(guide,guideSize);
+        preview=new PreviewView(this);preview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);preview.setScaleType(PreviewView.ScaleType.FIT_CENTER);stage.addView(preview,new FrameLayout.LayoutParams(-1,-1));captureGuide=new AppUi.CaptureGuide(this);stage.addView(captureGuide,new FrameLayout.LayoutParams(-1,-1));
+        readingStatus=AppUi.badge(this,getString(R.string.reader_searching),Color.WHITE,0xc0142b4d);TextView guide=readingStatus;FrameLayout.LayoutParams guideSize=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.CENTER_HORIZONTAL);guideSize.topMargin=dp(12);stage.addView(guide,guideSize);
+        readingProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);readingProgress.setMax(100);readingProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(0xff8ee5cf));
+        FrameLayout.LayoutParams progressSize=new FrameLayout.LayoutParams(-1,dp(6),Gravity.BOTTOM);stage.addView(readingProgress,progressSize);resetReadingStatus();
         TextView privacy=AppUi.text(this,getString(R.string.camera_privacy),12,0xffc6d8ef,false);privacy.setGravity(Gravity.CENTER);root.addView(privacy);AppUi.gap(root,8);
         LinearLayout controls=AppUi.row(this);
         immediate=new Switch(this);immediate.setText(R.string.immediate_mode);immediate.setTextColor(Color.WHITE);immediate.setTextSize(13);immediate.setMinHeight(dp(48));immediate.setChecked(immediateEnabled);immediate.setContentDescription(getString(R.string.immediate_description));
-        immediate.setOnCheckedChangeListener((v,enabled)->{immediateEnabled=enabled;previewCycle++;consensus.reset();hint.setText(enabled?R.string.immediate_guide:R.string.camera_guide);});
+        immediate.setOnCheckedChangeListener((v,enabled)->{immediateEnabled=enabled;previewCycle++;consensus.reset();resetReadingStatus();hint.setText(enabled?R.string.immediate_guide:R.string.camera_guide);});
         controls.addView(immediate,new LinearLayout.LayoutParams(0,-2,1));
         flashButton=AppUi.button(this,getString(R.string.flash_off),false,null,this::toggleLight);flashButton.setEnabled(false);controls.addView(flashButton);root.addView(controls);AppUi.gap(root,8);
         shutter=button(root,R.string.take_photo,this::takePhoto);shutter.setMinHeight(dp(60));shutter.setEnabled(false);
@@ -121,7 +125,7 @@ public class ScannerActivity extends ComponentActivity {
     }
     private void toggleLight(){
         if(camera==null||busy||!camera.getCameraInfo().hasFlashUnit())return;
-        boolean requested=!lightOn;lightOn=requested;int cycle=++previewCycle;consensus.reset();flashButton.setText(requested?R.string.flash_on:R.string.flash_off);
+        boolean requested=!lightOn;lightOn=requested;int cycle=++previewCycle;consensus.reset();flashButton.setText(requested?R.string.flash_on:R.string.flash_off);resetReadingStatus();
         ListenableFuture<Void> change=camera.getCameraControl().enableTorch(requested);
         change.addListener(()->{if(cycle!=previewCycle||isFinishing())return;try{change.get();}catch(Exception e){lightOn=false;flashButton.setText(R.string.flash_off);hint.setText(R.string.flash_error);}},ContextCompat.getMainExecutor(this));
     }
@@ -133,20 +137,29 @@ public class ScannerActivity extends ComponentActivity {
         try{
             long now=SystemClock.elapsedRealtime();if(!active||busy||reviewing||!immediateEnabled||now-lastAnalysis<300)return;lastAnalysis=now;int cycle=previewCycle;
             ImageProxy.PlaneProxy plane=image.getPlanes()[0];LumaFrame frame=LumaFrame.from(plane.getBuffer(),image.getWidth(),image.getHeight(),plane.getRowStride(),plane.getPixelStride(),image.getImageInfo().getRotationDegrees(),1280);
-            LiveReader.Reading reading=new LiveReader().read(frame.pixels,frame.width,frame.height,key.length);int[] stable=consensus.accept(reading.answers,now);
+            LiveReader.Reading reading=new LiveReader().read(frame.pixels,frame.width,frame.height,key.length);int[] stable=consensus.accept(reading.answers,now);int progress=consensus.progress();
             runOnUiThread(()->{
                 if(!active||busy||reviewing||!immediateEnabled||cycle!=previewCycle||isFinishing())return;
-                if(reading.answers==null)hint.setText(reading.hint);
-                else hint.setText(getString(R.string.immediate_result,Grading.correct(key,reading.answers),key.length,Grading.grade(key,reading.answers)));
+                readingProgress.setProgress(progress);
+                boolean detected=reading.answers!=null;
+                captureGuide.setReadingState(detected?stable!=null?2:1:0);
+                readingStatus.setText(!detected?R.string.reader_searching:stable!=null?R.string.reader_ready:R.string.reader_validating);
+                if(!detected)hint.setText(reading.hint);
+                else hint.setText(R.string.reader_hold);
                 if(stable!=null)takePhoto();
             });
         }catch(RuntimeException e){consensus.reset();}
         finally{image.close();}
     }
+    private void resetReadingStatus(){
+        if(readingProgress!=null)readingProgress.setProgress(0);
+        if(captureGuide!=null)captureGuide.setReadingState(0);
+        if(readingStatus!=null)readingStatus.setText(immediateEnabled?R.string.reader_searching:R.string.reader_manual);
+    }
     private void cameraError(){stopLight();consensus.reset();previewCycle++;if(provider!=null)provider.unbindAll();camera=null;capture=null;shutter.setEnabled(false);flashButton.setEnabled(false);retryCamera.setVisibility(View.VISIBLE);hint.setText(R.string.camera_error);}
     private void takePhoto(){
         if(!active||busy||capture==null)return;
-        busy=true;previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);final int token=photo.begin();
+        busy=true;previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);readingStatus.setText(R.string.reader_checking_photo);final int token=photo.begin();
         // The in-memory callback has no OutputFileOptions, MediaStore or file URI.
         capture.takePicture(worker,new ImageCapture.OnImageCapturedCallback(){
             @Override public void onCaptureSuccess(ImageProxy image){
@@ -186,7 +199,7 @@ public class ScannerActivity extends ComponentActivity {
             return new LiveReader().read(luma,w,h,key.length);
         }finally{if(small!=image)small.recycle();}
     }
-    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;immediate.setChecked(false);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
+    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;resetReadingStatus();immediate.setChecked(false);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
     private void reviewScreen(String readingHint){
         LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
         root.addView(AppUi.text(this,getString(R.string.review_title),27,AppUi.INK,true));if(exam!=null){AppUi.gap(root,4);root.addView(AppUi.text(this,exam,14,AppUi.MUTED,false));}AppUi.gap(root,14);

@@ -54,8 +54,9 @@ public final class AppUi {
         @Override protected void onDraw(Canvas c){float cx=getWidth()/2f,cy=getHeight()/2f,r=Math.min(getWidth(),getHeight())/2f-dp(getContext(),10);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(dp(getContext(),10));paint.setStrokeCap(Paint.Cap.ROUND);paint.setColor(0xffe8edf8);c.drawCircle(cx,cy,r,paint);paint.setColor(BLUE);c.drawArc(cx-r,cy-r,cx+r,cy+r,-90,grade*36,false,paint);paint.setStyle(Paint.Style.FILL);paint.setTextAlign(Paint.Align.CENTER);paint.setTypeface(font);paint.setTextSize(dp(getContext(),42));paint.setColor(INK);c.drawText(gradeLabel,cx,cy+dp(getContext(),4),paint);paint.setTextSize(dp(getContext(),10));paint.setColor(MUTED);c.drawText("NOTA / 10",cx,cy+dp(getContext(),25),paint);}
     }
     public static final class CaptureGuide extends View {
-        private final Paint p=new Paint(3);
+        private final Paint p=new Paint(3);private int readingState;
+        public void setReadingState(int state){readingState=state;invalidate();}
         public CaptureGuide(Context c){super(c);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);setClickable(false);}
-        @Override protected void onDraw(Canvas c){float h=Math.min(getHeight()*.84f,getWidth()*1.22f),w=h*2/3,left=(getWidth()-w)/2,top=(getHeight()-h)/2,k=dp(getContext(),24);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(getContext(),3));p.setStrokeCap(Paint.Cap.ROUND);p.setColor(0xff8ee5cf);for(int i=0;i<4;i++){float x=i%2==0?left:left+w,y=i<2?top:top+h;c.drawLine(x,y,x+(i%2==0?k:-k),y,p);c.drawLine(x,y,x,y+(i<2?k:-k),p);}}
+        @Override protected void onDraw(Canvas c){float h=Math.min(getHeight()*.84f,getWidth()*1.22f),w=h*2/3,left=(getWidth()-w)/2,top=(getHeight()-h)/2,k=dp(getContext(),24);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(getContext(),3));p.setStrokeCap(Paint.Cap.ROUND);p.setColor(readingState==2?0xff8ee5cf:readingState==1?0xffffcc70:0xffd9e3f4);for(int i=0;i<4;i++){float x=i%2==0?left:left+w,y=i<2?top:top+h;c.drawLine(x,y,x+(i%2==0?k:-k),y,p);c.drawLine(x,y,x,y+(i<2?k:-k),p);}}
     }
 }

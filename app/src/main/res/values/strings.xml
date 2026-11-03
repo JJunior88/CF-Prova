@@ -23,7 +23,6 @@
     <string name="no_result">Leitura não concluída</string>
     <string name="photo_result">Acertos: %1$d / %2$d\nNota: %3$.1f / 10</string>
     <string name="close_photo">Voltar à conferência</string>
-    <string name="frame_label">ENQUADRE UM CARTÃO-RESPOSTA</string>
     <string name="camera_privacy">A foto é temporária e não vai para a galeria.</string>
     <string name="review_summary">RESULTADO DA LEITURA</string>
     <string name="review_photo">Foto do cartão-resposta</string>
@@ -36,9 +35,14 @@
     <string name="immediate_description">Ativar conferência imediata: ao reconhecer respostas estáveis, fotografa e abre a conferência automaticamente.</string>
     <string name="immediate_guide">Aponte para o cartão-resposta. Ao estabilizar a leitura, a foto de conferência é feita automaticamente. Ou toque em Tirar foto.</string>
     <string name="immediate_unavailable">Este aparelho precisa de captura por botão. Toque em Tirar foto; acertos e nota aparecerão na conferência.</string>
-    <string name="immediate_result">Acertos: %1$d / %2$d • Nota: %3$.1f / 10. Mantenha firme…</string>
     <string name="flash_off">Flash desligado</string>
     <string name="flash_on">Flash ligado</string>
     <string name="flash_unavailable">Sem flash</string>
     <string name="flash_error">Não foi possível ativar a luz. Verifique a câmera e tente novamente.</string>
+    <string name="reader_searching">PROCURANDO CARTÃO</string>
+    <string name="reader_validating">VALIDANDO MARCAÇÕES</string>
+    <string name="reader_ready">LEITURA ESTÁVEL</string>
+    <string name="reader_checking_photo">CONFERINDO FOTO</string>
+    <string name="reader_manual">CAPTURA MANUAL</string>
+    <string name="reader_hold">Cartão reconhecido. Mantenha firme enquanto as marcações são confirmadas. A captura será automática.</string>
 </resources>
