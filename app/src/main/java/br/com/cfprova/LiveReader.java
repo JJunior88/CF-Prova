@@ -55,19 +55,37 @@ public final class LiveReader {
         if(cards.isEmpty())return new Reading(null,"Código ou marcadores sem nitidez. Use o cartão-resposta v2 do app, aproxime e toque para focar; ative a luz se necessário.");
         Card card=cards.get(0);
         if(card.count!=count)return new Reading(null,"O cartão-resposta tem "+card.count+" questões, mas a prova está configurada com "+count+". Use o modelo correspondente.");
+        return readGrid(pixels,width,height,count,card.map);
+    }
+    /** Teacher-selected marker centers, in image pixels: TL, TR, BR, BL. */
+    public Reading readAligned(byte[] pixels,int width,int height,int count,double[] corners){
+        if(count<5||count>40||width<100||height<100||pixels.length!=width*height||corners==null||corners.length!=8)throw new IllegalArgumentException();
+        Marker[] points=new Marker[4];
+        for(int i=0;i<4;i++){
+            double x=corners[2*i],y=corners[2*i+1];
+            if(!Double.isFinite(x)||!Double.isFinite(y)||x<0||x>=width-1||y<0||y>=height-1)return new Reading(null,"Os quatro pontos precisam estar dentro da foto.");
+            points[i]=new Marker(x,y,1);
+        }
+        if(!convex(points)||distance(points[0],points[1])<90||distance(points[0],points[3])<140)return new Reading(null,"Toque nos quadrados na ordem indicada. Aproxime a câmera se o cartão estiver pequeno.");
+        double[] map=homography(points);if(map==null)return new Reading(null,"Alinhamento inválido. Marque novamente os quatro quadrados.");
+        int decoded=decode(pixels,width,height,map);
+        if(decoded>=0&&decoded!=count)return new Reading(null,"O cartão tem "+decoded+" questões. Ajuste a quantidade da prova.");
+        return readGrid(pixels,width,height,count,map);
+    }
+    private Reading readGrid(byte[] pixels,int width,int height,int count,double[] map){
         int[] answers=new int[count];int rings=0;
         for(int i=0;i<count;i++){
             double[] dark=new double[5];
             for(int j=0;j<5;j++){
-                double x=220+j*65,y=rowY(i,count),paper=paper(pixels,width,height,card.map,x,y,10),ink=markerInk(pixels,width,height,card.map);
+                double x=220+j*65,y=rowY(i,count),paper=paper(pixels,width,height,map,x,y,10),ink=markerInk(pixels,width,height,map);
                 if(paper-ink<35)return new Reading(null,"Contraste insuficiente. Ative a luz, evite reflexos e refaça a leitura.");
-                dark[j]=darkness(pixels,width,height,card.map,x,y,3,paper,ink);
+                dark[j]=darkness(pixels,width,height,map,x,y,3,paper,ink);
                 if(dark[j]<0)return new Reading(null,"Mantenha os quatro marcadores e todas as respostas visíveis.");
                 // The thin printed outline can shift by a pixel after JPEG/resize. Search a narrow radial band.
                 int border=0;
                 for(int k=0;k<16;k++){
                     double angle=k*Math.PI/8,best=255;
-                    for(double radius:new double[]{5.2,6,6.8}){double value=sample(pixels,width,height,card.map,x+radius*Math.cos(angle),y+radius*Math.sin(angle));if(value>=0)best=Math.min(best,value);}
+                    for(double radius:new double[]{5.2,6,6.8}){double value=sample(pixels,width,height,map,x+radius*Math.cos(angle),y+radius*Math.sin(angle));if(value>=0)best=Math.min(best,value);}
                     if(best<paper-(paper-ink)*.35)border++;
                 }
                 if(border>=8)rings++;

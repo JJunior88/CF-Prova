@@ -28,11 +28,11 @@ public class ScannerActivity extends ComponentActivity {
     private TextView hint,summary,readingStatus;
     private ProgressBar readingProgress;
     private AppUi.CaptureGuide captureGuide;
-    private Button shutter,retryCamera,flashButton;
+    private Button shutter,retryCamera,flashButton,finishReview;
     private Switch immediate;
     private Camera camera;
     private final ReadingConsensus consensus=new ReadingConsensus();
-    private volatile boolean immediateEnabled=true;
+    private volatile boolean immediateEnabled=false;
     private volatile int previewCycle;
     private long lastAnalysis;
     private boolean lightOn;
@@ -190,41 +190,95 @@ public class ScannerActivity extends ComponentActivity {
         options.inJustDecodeBounds=false;Bitmap decoded=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);if(decoded==null)throw new IllegalArgumentException("Invalid camera JPEG");
         int rotation=image.getImageInfo().getRotationDegrees();if(rotation!=0){Matrix m=new Matrix();m.setRotate(rotation);Bitmap upright=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),m,true);if(upright!=decoded)decoded.recycle();decoded=upright;}return decoded;
     }
-    private LiveReader.Reading readPhoto(Bitmap image){
-        double scale=Math.min(1,1800.0/Math.max(image.getWidth(),image.getHeight()));
+    private LiveReader.Reading readPhoto(Bitmap image){return readPhoto(image,null);}
+    private LiveReader.Reading readPhoto(Bitmap image,double[] corners){
+        double scale=Math.min(1,2400.0/Math.max(image.getWidth(),image.getHeight()));
         Bitmap small=Bitmap.createScaledBitmap(image,Math.max(1,(int)(image.getWidth()*scale)),Math.max(1,(int)(image.getHeight()*scale)),true);
         try{
             int w=small.getWidth(),h=small.getHeight();int[] colors=new int[w*h];small.getPixels(colors,0,w,0,0,w,h);byte[] luma=new byte[colors.length];
             for(int i=0;i<colors.length;i++){int c=colors[i];luma[i]=(byte)(int)(.299*Color.red(c)+.587*Color.green(c)+.114*Color.blue(c));}
-            return new LiveReader().read(luma,w,h,key.length);
+            if(corners==null)return new LiveReader().read(luma,w,h,key.length);
+            double[] scaled=corners.clone();for(int i=0;i<8;i++)scaled[i]*=i%2==0?w/(double)image.getWidth():h/(double)image.getHeight();
+            return new LiveReader().readAligned(luma,w,h,key.length,scaled);
         }finally{if(small!=image)small.recycle();}
     }
     private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;resetReadingStatus();immediate.setChecked(false);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
     private void reviewScreen(String readingHint){
-        LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
+        finishReview=null;LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
         root.addView(AppUi.text(this,getString(R.string.review_title),27,AppUi.INK,true));if(exam!=null){AppUi.gap(root,4);root.addView(AppUi.text(this,exam,14,AppUi.MUTED,false));}AppUi.gap(root,14);
         ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout content=AppUi.column(this);scroll.addView(content);
         LinearLayout result=AppUi.hero(this);result.addView(AppUi.text(this,getString(R.string.review_summary),10,0xffa9e8d5,true));AppUi.gap(result,8);summary=AppUi.text(this,"",27,Color.WHITE,true);result.addView(summary);content.addView(result,AppUi.block(this,14));updateSummary();
         LinearLayout imageCard=AppUi.card(this);LinearLayout caption=AppUi.row(this);caption.addView(AppUi.text(this,getString(R.string.review_photo),17,AppUi.INK,true),new LinearLayout.LayoutParams(0,-2,1));caption.addView(AppUi.badge(this,getString(R.string.zoom_label),AppUi.BLUE,0xffedf1ff));caption.setOnClickListener(v->zoomPhoto());caption.setContentDescription(getString(R.string.photo_description));imageCard.addView(caption);AppUi.gap(imageCard,12);
         reviewImage=new ImageView(this);reviewImage.setImageBitmap(photo.get());reviewImage.setScaleType(ImageView.ScaleType.FIT_CENTER);reviewImage.setContentDescription(getString(R.string.photo_description));reviewImage.setBackground(AppUi.shape(this,0xffeaf0f7,14));reviewImage.setClipToOutline(true);imageCard.addView(reviewImage,new LinearLayout.LayoutParams(-1,dp(320)));reviewImage.setOnClickListener(v->zoomPhoto());AppUi.gap(imageCard,10);imageCard.addView(AppUi.text(this,getString(R.string.zoom_hint),12,AppUi.MUTED,false));content.addView(imageCard,AppUi.block(this,14));
+        LinearLayout assistance=AppUi.card(this);
+        assistance.addView(AppUi.text(this,"Precisa ajustar a leitura?",17,AppUi.INK,true));AppUi.gap(assistance,8);
+        assistance.addView(AppUi.text(this,"Alinhe os quatro quadrados na foto ou confira as respostas uma a uma. Nenhuma resposta será preenchida por suposição.",13,AppUi.MUTED,false));
+        assistance.addView(AppUi.button(this,"Alinhar cartão na foto",false,null,this::alignPhoto),AppUi.block(this,8));
+        assistance.addView(AppUi.button(this,"Conferir respostas manualmente",false,null,()->new android.app.AlertDialog.Builder(this).setMessage("Iniciar conferência manual? Você precisará indicar cada resposta olhando a foto. A leitura anterior será substituída.").setNegativeButton("Cancelar",null).setPositiveButton("Iniciar",(d,w)->{answers=new int[key.length];java.util.Arrays.fill(answers,-2);reviewScreen("Conferência manual");}).show()),AppUi.block(this,8));
+        content.addView(assistance,AppUi.block(this,14));
         if(answers==null){LinearLayout warning=AppUi.card(this);warning.setBackground(AppUi.shape(this,0xfffff2dc,20));warning.addView(AppUi.text(this,getString(R.string.photo_unreadable,readingHint),15,0xff78521f,false));content.addView(warning,AppUi.block(this,12));}
         else{
             content.addView(AppUi.text(this,getString(R.string.answers_title),20,AppUi.INK,true));AppUi.gap(content,6);content.addView(AppUi.text(this,getString(R.string.review_answers),13,AppUi.MUTED,false));AppUi.gap(content,14);
-            String[] choices={"A","B","C","D","E",getString(R.string.blank)};
+            String[] choices={"Selecione…","A","B","C","D","E",getString(R.string.blank)};
             for(int i=0;i<answers.length;i++){
                 final int index=i;LinearLayout card=AppUi.card(this);card.setPadding(dp(12),dp(12),dp(12),dp(12));LinearLayout row=AppUi.row(this);LinearLayout label=AppUi.column(this);label.addView(AppUi.text(this,getString(R.string.question_key,i+1,String.valueOf((char)('A'+key[i]))),15,AppUi.INK,true));AppUi.gap(label,6);TextView state=AppUi.badge(this,"",AppUi.TEAL,0xffe8f5ee);answerState(state,index);label.addView(state);row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]<0?5:answers[i]);spinner.setBackground(AppUi.outline(this,0xfff4f7fc,12,AppUi.LINE));spinner.setContentDescription(getString(R.string.answer_description,i+1));
-                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==5?-1:pos;updateSummary();answerState(state,index);}}});
+                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]==-2?0:answers[i]==-1?6:answers[i]+1);spinner.setBackground(AppUi.outline(this,0xfff4f7fc,12,AppUi.LINE));spinner.setContentDescription(getString(R.string.answer_description,i+1));
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==0?-2:pos==6?-1:pos-1;updateSummary();answerState(state,index);}}});
                 row.addView(spinner,new LinearLayout.LayoutParams(dp(114),dp(52)));card.addView(row);content.addView(card,AppUi.block(this,8));
             }
         }
         AppUi.gap(content,10);content.addView(AppUi.text(this,getString(R.string.photo_memory),12,AppUi.MUTED,false));AppUi.gap(content,16);
         LinearLayout dock=AppUi.column(this);dock.setPadding(0,dp(8),0,0);root.addView(dock);
-        if(answers!=null)button(dock,R.string.finish_review,()->{int[] resultAnswers=answers.clone();discardPhoto();setResult(RESULT_OK,new Intent().putExtra("answers",resultAnswers));finish();});
-        LinearLayout secondary=AppUi.row(this);Button retake=AppUi.button(this,getString(R.string.retake),false,"camera",this::cameraScreen);Button exit=AppUi.button(this,getString(R.string.discard_exit),false,null,this::finish);LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);secondary.addView(retake,half);secondary.addView(exit,new LinearLayout.LayoutParams(0,-2,1));dock.addView(secondary);
+        dock.addView(AppUi.button(this,"Ampliar foto para conferir",false,null,this::zoomPhoto),AppUi.block(this,8));
+        if(answers!=null)finishReview=button(dock,R.string.finish_review,()->{if(pendingAnswers()>0)return;int[] resultAnswers=answers.clone();discardPhoto();setResult(RESULT_OK,new Intent().putExtra("answers",resultAnswers));finish();});
+        LinearLayout secondary=AppUi.row(this);Button retake=AppUi.button(this,getString(R.string.retake),false,"camera",this::cameraScreen);Button exit=AppUi.button(this,getString(R.string.discard_exit),false,null,this::finish);LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);secondary.addView(retake,half);secondary.addView(exit,new LinearLayout.LayoutParams(0,-2,1));dock.addView(secondary);updateSummary();
     }
-    private void answerState(TextView view,int i){boolean correct=answers[i]==key[i];view.setText(getString(correct?R.string.answer_correct:answers[i]<0?R.string.blank:R.string.answer_wrong));view.setTextColor(correct?AppUi.TEAL:AppUi.MUTED);view.setBackground(AppUi.shape(this,correct?0xffe7f5ee:0xffeef1f7,10));}
-    private void updateSummary(){if(summary==null)return;if(answers==null)summary.setText(R.string.no_result);else summary.setText(getString(R.string.photo_result,Grading.correct(key,answers),key.length,Grading.grade(key,answers)));}
+    private void answerState(TextView view,int i){boolean correct=answers[i]==key[i];view.setText(answers[i]==-2?"Pendente":getString(correct?R.string.answer_correct:answers[i]<0?R.string.blank:R.string.answer_wrong));view.setTextColor(correct?AppUi.TEAL:AppUi.MUTED);view.setBackground(AppUi.shape(this,correct?0xffe7f5ee:0xffeef1f7,10));}
+    private int pendingAnswers(){int pending=0;if(answers!=null)for(int answer:answers)if(answer==-2)pending++;return pending;}
+    private void updateSummary(){
+        if(summary==null)return;int pending=pendingAnswers();
+        if(answers==null)summary.setText(R.string.no_result);
+        else if(pending>0)summary.setText(getString(R.string.pending_answers,pending));
+        else summary.setText(getString(R.string.photo_result,Grading.correct(key,answers),key.length,Grading.grade(key,answers)));
+        if(finishReview!=null)finishReview.setEnabled(answers!=null&&pending==0);
+    }
+    private void alignPhoto(){
+        Bitmap source=photo.get();if(source==null)return;
+        zoom=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);zoom.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        LinearLayout box=AppUi.column(this);box.setPadding(dp(16),dp(24),dp(16),dp(20));box.setBackgroundColor(AppUi.NAVY);
+        TextView instruction=AppUi.text(this,"",17,Color.WHITE,true);box.addView(instruction);
+        TextView help=AppUi.text(this,"Toque no centro dos quadrados: comece pelo maior. Use a orientação do cartão impresso.",13,Color.WHITE,false);box.addView(help);
+        MarkerPicker picker=new MarkerPicker(this,source,instruction);box.addView(picker,new LinearLayout.LayoutParams(-1,0,1));
+        Button apply=AppUi.button(this,"Ler área marcada",true,"check",()->{
+            if(picker.selected!=4){instruction.setText(R.string.mark_four);return;}
+            double[] corners=picker.points.clone();Bitmap snapshot=source.copy(Bitmap.Config.ARGB_8888,false);zoom.dismiss();zoom=null;
+            if(snapshot==null)return;
+            worker.execute(()->{
+                LiveReader.Reading reading;
+                try{reading=readPhoto(snapshot,corners);}catch(RuntimeException e){reading=new LiveReader.Reading(null,"Não foi possível ler a área. Refaça a foto ou confira manualmente.");}finally{snapshot.recycle();}
+                LiveReader.Reading result=reading;runOnUiThread(()->{if(!active||isFinishing()||photo.get()!=source)return;answers=result.answers==null?null:result.answers.clone();reviewScreen(result.hint);});
+            });
+        });box.addView(apply,AppUi.block(this,8));
+        box.addView(AppUi.button(this,"Desfazer último ponto",false,null,picker::undo),AppUi.block(this,8));
+        box.addView(AppUi.button(this,"Cancelar",false,null,()->{zoom.dismiss();zoom=null;}),AppUi.block(this,8));
+        zoom.setContentView(box);zoom.show();box.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(dp(16),i.getSystemWindowInsetTop()+dp(12),dp(16),i.getSystemWindowInsetBottom()+dp(12));return i;});box.requestApplyInsets();
+    }
+    private static final class MarkerPicker extends View {
+        private final Bitmap bitmap;private final Paint paint=new Paint(3);private final TextView instruction;
+        final double[] points=new double[8];int selected;float fit,left,top;
+        MarkerPicker(Context c,Bitmap b,TextView label){super(c);bitmap=b;instruction=label;setContentDescription("Foto do cartão para alinhar os quatro marcadores");prompt();}
+        void undo(){if(selected>0)selected--;prompt();invalidate();}
+        void prompt(){String[] names={"1. Quadrado maior: superior esquerdo","2. Quadrado superior direito","3. Quadrado inferior direito","4. Quadrado inferior esquerdo","Quatro pontos marcados. Toque em Ler área marcada."};instruction.setText(names[selected]);}
+        @Override protected void onDraw(Canvas c){
+            if(bitmap.isRecycled())return;fit=Math.min(getWidth()/(float)bitmap.getWidth(),getHeight()/(float)bitmap.getHeight());left=(getWidth()-bitmap.getWidth()*fit)/2;top=(getHeight()-bitmap.getHeight()*fit)/2;
+            c.save();c.translate(left,top);c.scale(fit,fit);c.drawBitmap(bitmap,0,0,paint);c.restore();
+            paint.setColor(0xff22cc99);paint.setStrokeWidth(3);paint.setStyle(Paint.Style.STROKE);
+            for(int i=0;i<selected;i++){float x=left+(float)points[i*2]*fit,y=top+(float)points[i*2+1]*fit;c.drawCircle(x,y,12,paint);if(i>0)c.drawLine(left+(float)points[(i-1)*2]*fit,top+(float)points[(i-1)*2+1]*fit,x,y,paint);}
+            paint.setStyle(Paint.Style.FILL);
+        }
+        @Override public boolean onTouchEvent(MotionEvent event){if(event.getAction()==MotionEvent.ACTION_UP){performClick();if(fit<=0||selected>=4)return true;double x=(event.getX()-left)/fit,y=(event.getY()-top)/fit;if(x>=0&&y>=0&&x<bitmap.getWidth()&&y<bitmap.getHeight()){points[selected*2]=x;points[selected*2+1]=y;selected++;prompt();invalidate();}}return true;}
+        @Override public boolean performClick(){super.performClick();return true;}
+    }
     private void zoomPhoto(){
         if(photo.get()==null)return;zoom=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);zoom.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setBackgroundColor(Color.BLACK);

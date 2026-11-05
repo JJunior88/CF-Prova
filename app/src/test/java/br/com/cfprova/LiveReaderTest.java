@@ -4,6 +4,23 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 public class LiveReaderTest {
+    @Test public void teacherCanAlignCardWhenTinySignatureCannotBeRead(){
+        int[] a={0,1,-1,3,4};byte[] p=card(5,a,0,false,250,20);
+        assertNull(new LiveReader().read(p,800,1100,5).answers);
+        LiveReader.Reading r=new LiveReader().readAligned(p,800,1100,5,new double[]{140,140,660,140,660,960,140,960});
+        assertNotNull(r.hint,r.answers);assertArrayEquals(a,r.answers);
+    }
+    @Test public void manualAlignmentStillRejectsDoubleMarksAndWrongCount(){
+        double[] points={140,140,660,140,660,960,140,960};
+        assertNull(new LiveReader().readAligned(card(5,new int[]{0,1,-2,3,4},0,true,250,20),800,1100,5,points).answers);
+        assertNull(new LiveReader().readAligned(card(5,new int[]{0,1,2,3,4},0,true,250,20),800,1100,10,points).answers);
+    }
+    @Test public void manualAlignmentRejectsCrossedAndOutOfBoundsPoints(){
+        byte[] p=card(5,new int[]{0,1,2,3,4},0,true,250,20);
+        assertNull(new LiveReader().readAligned(p,800,1100,5,new double[]{140,140,660,960,660,140,140,960}).answers);
+        assertNull(new LiveReader().readAligned(p,800,1100,5,new double[]{-1,140,660,140,660,960,140,960}).answers);
+    }
+
     private byte[] card(int count,int[] answers,double shear,boolean signature,int paper,int ink){
         return card(count,answers,shear,signature,paper,ink,0);
     }

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="camera_title">Ler cartão-resposta</string>
-    <string name="camera_guide">Mostre os quatro marcadores do cartão-resposta. Toque para focar e use a luz quando necessário.</string>
+    <string name="camera_guide">Aproxime até o cartão ocupar a maior parte da câmera, sem cortar os quatro quadrados. Toque para focar e depois em Tirar foto.</string>
     <string name="enable_camera">Ativar câmera</string>
     <string name="back">Voltar</string>
     <string name="camera_permission">Permita acesso à câmera. Se o Android não perguntar novamente, ative em Configurações &gt; Aplicativos &gt; CF Prova &gt; Permissões.</string>
@@ -31,7 +31,7 @@
     <string name="answer_description">Resposta lida da questão %1$d</string>
     <string name="answer_correct">Acerto</string>
     <string name="answer_wrong">Erro</string>
-    <string name="immediate_mode">Conferência imediata</string>
+    <string name="immediate_mode">Captura automática</string>
     <string name="immediate_description">Ativar conferência imediata: ao reconhecer respostas estáveis, fotografa e abre a conferência automaticamente.</string>
     <string name="immediate_guide">Aponte para o cartão-resposta. Ao estabilizar a leitura, a foto de conferência é feita automaticamente. Ou toque em Tirar foto.</string>
     <string name="immediate_unavailable">Este aparelho precisa de captura por botão. Toque em Tirar foto; acertos e nota aparecerão na conferência.</string>
@@ -45,4 +45,6 @@
     <string name="reader_checking_photo">CONFERINDO FOTO</string>
     <string name="reader_manual">CAPTURA MANUAL</string>
     <string name="reader_hold">Cartão reconhecido. Mantenha firme enquanto as marcações são confirmadas. A captura será automática.</string>
+    <string name="pending_answers">%1$d respostas para conferir\nNota disponível ao concluir</string>
+    <string name="mark_four">Marque os quatro quadrados antes de continuar.</string>
 </resources>

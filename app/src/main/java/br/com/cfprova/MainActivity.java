@@ -16,6 +16,7 @@ public class MainActivity extends Activity {
     private String currentPage="home";
     private int[] key=new int[20];
     private int[] answers;
+    private boolean keyConfirmed;
     private String exam="Minha prova";
     private EditText title,count;
     private static final int INK=AppUi.INK;
@@ -25,7 +26,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         String saved=getPreferences(0).getString("key","");
         if(!saved.isEmpty()) {key=new int[saved.length()]; for(int i=0;i<key.length;i++)key[i]=saved.charAt(i)-'A';}
-        exam=getPreferences(0).getString("exam","Minha prova");
+        exam=getPreferences(0).getString("exam","Minha prova");keyConfirmed=getPreferences(0).getBoolean("keyConfirmed",false);
         home();
     }
     private void page(String heading,String sub){
@@ -54,13 +55,14 @@ public class MainActivity extends Activity {
     private void home(){
         currentPage="home";page("Sua próxima correção","");
         LinearLayout hero=AppUi.hero(this);hero.addView(AppUi.text(this,"MENOS PAPELADA. MAIS TEMPO.",10,0xffaddfdc,true));AppUi.gap(hero,12);
-        hero.addView(AppUi.text(this,"Sua próxima correção\ncomeça aqui.",29,Color.WHITE,true));AppUi.gap(hero,10);
-        hero.addView(AppUi.text(this,"Prepare a prova, leia o cartão-resposta e confira os acertos.",14,0xffdae5f8,false));AppUi.gap(hero,16);
+        hero.addView(AppUi.text(this,"Corrija com foto.\nConfira com segurança.",29,Color.WHITE,true));AppUi.gap(hero,10);
+        hero.addView(AppUi.text(this,"Confirme o gabarito, fotografe de perto e confira. Se a leitura falhar, alinhe o cartão na foto.",14,0xffdae5f8,false));AppUi.gap(hero,16);
         hero.addView(AppUi.badge(this,"01  Prepare    →    02  Fotografe    →    03  Confira",Color.WHITE,0xff345485));body.addView(hero,AppUi.block(this,18));
         LinearLayout setup=AppUi.card(this);AppUi.section(setup,"01","Sua avaliação","Um gabarito por vez, do seu jeito.");
         title=field(setup,"NOME DA PROVA",exam,false);count=field(setup,"QUESTÕES · DE 5 A 40",""+key.length,true);
         setup.addView(AppUi.badge(this,"A–E  •  Questões com o mesmo peso",AppUi.MUTED,0xfff0f3fa));body.addView(setup,AppUi.block(this,14));
         LinearLayout answer=AppUi.card(this);AppUi.section(answer,"02","Gabarito do professor","Confira a alternativa correta de cada questão antes de começar.");
+        answer.addView(AppUi.badge(this,keyConfirmed?"GABARITO CONFIRMADO":"CONFIRME ANTES DE CORRIGIR",keyConfirmed?AppUi.TEAL:AppUi.BLUE,0xffe9efff),AppUi.block(this,8));
         action(answer,"Conferir gabarito",false,"check",()->{if(configure())editKey();});body.addView(answer,AppUi.block(this,14));
         LinearLayout print=AppUi.card(this);AppUi.section(print,"03","Cartão-resposta do aluno","Só a grade de respostas, sem identificação, no canto inferior direito de ¼ de A4.");
         LinearLayout exports=AppUi.row(this);Button word=AppUi.button(this,"Word",false,"doc",()->{if(configure())word();});Button pdf=AppUi.button(this,"PDF",false,"doc",()->{if(configure())pdf();});
@@ -70,15 +72,16 @@ public class MainActivity extends Activity {
     }
     private boolean configure(){
         try {int n=Integer.parseInt(count.getText().toString());if(n<5||n>40)throw new NumberFormatException();
-            if(n!=key.length){key=Arrays.copyOf(key,n);} exam=title.getText().toString().trim();if(exam.isEmpty())exam="Minha prova";save();return true;
+            if(n!=key.length){key=Arrays.copyOf(key,n);keyConfirmed=false;} exam=title.getText().toString().trim();if(exam.isEmpty())exam="Minha prova";save();return true;
         }catch(NumberFormatException e){message("Informe de 5 a 40 questões.");return false;}
     }
-    private void save(){StringBuilder s=new StringBuilder();for(int v:key)s.append((char)('A'+v));getPreferences(0).edit().putString("key",s.toString()).putString("exam",exam).apply();}
+    private void save(){StringBuilder s=new StringBuilder();for(int v:key)s.append((char)('A'+v));getPreferences(0).edit().putString("key",s.toString()).putString("exam",exam).putBoolean("keyConfirmed",keyConfirmed).apply();}
     private void editKey(){
+        keyConfirmed=false;
         currentPage="key";page("Gabarito da prova",exam+" • Toque na alternativa correta de cada questão.");
         body.addView(AppUi.badge(this,key.length+" QUESTÕES  •  ALTERNATIVAS A–E",AppUi.BLUE,0xffe9efff));AppUi.gap(body,16);
         for(int i=0;i<key.length;i++)answerRow(i,key);
-        action(footer,"Salvar gabarito",true,"check",()->{save();home();});
+        action(footer,"Salvar gabarito",true,"check",()->{keyConfirmed=true;save();home();});
     }
     private void answerRow(int i,int[] values){
         LinearLayout card=AppUi.card(this);card.setPadding(dp(12),dp(12),dp(12),dp(12));
@@ -117,6 +120,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){message("Não foi possível gerar ou compartilhar o PDF: "+e.getMessage());}finally{doc.close();}
     }
     private void capture(){
+        if(!keyConfirmed){new AlertDialog.Builder(this).setMessage("Confira e salve o gabarito do professor antes de corrigir os cartões.").setPositiveButton("Conferir gabarito",(d,w)->editKey()).setNegativeButton("Cancelar",null).show();return;}
         startActivityForResult(new Intent(this,ScannerActivity.class).putExtra("key",key.clone()).putExtra("exam",exam),1);
     }
     @Override protected void onActivityResult(int request,int code,Intent data){

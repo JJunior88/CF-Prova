@@ -17,9 +17,9 @@ A interface mantém cartões de etapas, botões de ação destacados e acesso fi
 3. Imprima em A4, a 100%. O aluno deve preencher uma bolha inteira por questão com caneta escura.
 4. Toque em **Ler cartão-resposta**, permita a câmera e enquadre um cartão com os quatro marcadores visíveis. O leitor procura o cartão na imagem, sem exigir que ele fique no centro ou alinhado aos cantos da foto. Pode reconhecer o cartão girado; fotografar de frente, sem dobrar a folha, continua dando mais nitidez.
 5. Se precisar, toque em **Flash desligado** para ligar a luz contínua do flash. Ela ilumina a prévia e a foto. Toque em **Flash ligado** para desligar, inclusive se houver reflexos. Aparelhos sem esse recurso mostram **Sem flash**.
-6. A opção **Conferência imediata** começa ligada. Mantenha o celular firme: depois de pelo menos três quadros concordarem por cerca de 0,7 segundo, o app tira a foto temporária e abre a conferência automaticamente. A prévia indica a procura do cartão e o progresso da validação; acertos e nota aparecem depois da releitura da foto. O tempo total depende de foco, luz e aparelho.
-7. Para captura manual, desligue **Conferência imediata** e toque em **Tirar foto**. Em aparelhos que não suportam os três fluxos simultâneos da câmera, o app explica a limitação e mantém a captura por botão.
-8. A foto capturada é lida novamente, independentemente da prévia. Se não houver confiança, o app explica o motivo e não atribui nota usando respostas antigas. Verifique o modelo, aproxime, ajuste foco/luz e refaça.
+6. A opção **Captura automática** é opcional e começa desligada na versão 0.7.0. Ative-a se quiser o reconhecimento pela prévia. Mantenha o celular firme: depois de pelo menos três quadros concordarem por cerca de 0,7 segundo, o app tira a foto temporária e abre a conferência automaticamente. A prévia indica a procura do cartão e o progresso da validação; acertos e nota aparecem depois da releitura da foto. O tempo total depende de foco, luz e aparelho.
+7. Para captura manual, toque em **Tirar foto**, sem esperar o reconhecimento da prévia. Em aparelhos que não suportam os três fluxos simultâneos da câmera, o app explica a limitação e mantém a captura por botão.
+8. A foto capturada é lida novamente, independentemente da prévia. Se não houver confiança, o app explica o motivo e não atribui nota usando respostas antigas. Use **Alinhar cartão na foto** ou **Conferir respostas manualmente**; também pode refazer a foto mais próxima.
 9. Confira a imagem ampliável e as respostas. Ajustes manuais atualizam acertos e nota imediatamente. **Refazer foto** descarta a imagem anterior; **Concluir conferência** descarta a imagem e abre o resultado final; **Sair e descartar** cancela.
 
 Respostas em branco valem zero. Marcas fracas ou duplas impedem a leitura automática até serem corrigidas ou fotografadas com mais nitidez. Questões têm o mesmo peso e a nota vai de 0 a 10.
@@ -48,7 +48,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com 
 
 ## Download direto para Android
 
-[Baixar CF Prova 0.6.2 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.6.2.apk)
+[Baixar CF Prova 0.7.0 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.7.0.apk)
 
 O link direto não exige login nem extração de ZIP. No Android, abra o arquivo baixado e permita a instalação dessa origem, se solicitado. Android 8.0 ou posterior. APK de desenvolvimento; a assinatura é a mesma do APK compilado neste ambiente. O [SHA-256](downloads/SHA256SUMS) permite conferir a integridade do arquivo.
 
@@ -85,3 +85,15 @@ As letras ficaram maiores e o contorno das bolhas um pouco mais forte. As posiç
 O modelo continua próprio, sem identificação e no canto inferior direito da A4. A experiência de apontar e conferir usa leitura óptica de marcações: a câmera mostra **Procurando cartão**, **Validando marcações**, **Leitura estável** e **Conferindo foto**. A guia fica amarela durante a validação e verde quando as leituras concordam. Uma barra acompanha a estabilidade; só chega a 100% com pelo menos três quadros concordantes durante 0,7 segundo. Perda de leitura ou alteração das respostas reinicia o progresso.
 
 A nota não é apresentada a partir de um único quadro da prévia. A captura automática é relida para mostrar acertos e nota na conferência. Flash e captura manual continuam disponíveis, e a foto permanece só na memória. O fluxo é inspirado na referência de uso solicitada; não reproduz tecnologia proprietária nem lê cartões oficiais CAEd, SEAMA ou SEDIPI.
+
+## Conferência reformulada (0.7.0)
+
+A correção começa com a confirmação do gabarito do professor. Ao alterar a quantidade de questões, confirme o gabarito novamente. A câmera inicia em **captura manual**, com o botão **Tirar foto**: não é necessário esperar a prévia reconhecer o cartão. Aproxime até o cartão ocupar a maior parte da imagem, mantendo os quatro quadrados visíveis; evite fotografar a A4 inteira de longe. O processamento da foto preserva até 2400 pixels no lado maior.
+
+Após fotografar, há três caminhos:
+
+- **Leitura automática da foto:** quando reconhecida com confiança, mostra respostas, acertos e nota para revisão.
+- **Alinhar cartão na foto:** toque no centro dos quatro quadrados, na ordem superior esquerdo (o maior), superior direito, inferior direito e inferior esquerdo. Toque em **Ler área marcada**. Isso permite localizar a grade quando o pequeno código óptico ou a localização automática falha. A quantidade configurada deve coincidir com o impresso; se o código puder ser decodificado, uma divergência bloqueia a leitura. Contraste, nitidez das bolhas e marcas ambíguas continuam sendo validados. Alinhamento manual não torna outros modelos compatíveis.
+- **Conferir respostas manualmente:** todas as respostas começam como **pendentes**, sem alternativas presumidas. Consulte a foto ampliável pelo botão fixo na parte inferior e selecione A–E ou Em branco em cada questão. Nota e conclusão ficam bloqueadas até todas serem informadas. Esta opção é uma transcrição pelo professor, não reconhecimento automático.
+
+O cartão v2 permanece compatível, sem identificação, no canto inferior direito. Fotos e alinhamentos ficam só na memória. Os testes incluem leitura com alinhamento manual sem código legível, rejeição de pontos inválidos, marca dupla e quantidade divergente. A interface foi exercitada em Android simulado, incluindo o bloqueio de conclusão enquanto há respostas pendentes; câmera física ainda requer validação no aparelho.
