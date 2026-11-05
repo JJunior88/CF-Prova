@@ -46,6 +46,12 @@ Na nuvem preparada: `/workspace/tooling/cf-gradle testDebugUnitTest lintDebug as
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com câmera traseira. Compilação de desenvolvimento, sem assinatura de publicação.
 
+## Download direto para Android
+
+[Baixar CF Prova 0.6.2 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.6.2.apk)
+
+O link direto não exige login nem extração de ZIP. No Android, abra o arquivo baixado e permita a instalação dessa origem, se solicitado. Android 8.0 ou posterior. APK de desenvolvimento; a assinatura é a mesma do APK compilado neste ambiente. O [SHA-256](downloads/SHA256SUMS) permite conferir a integridade do arquivo.
+
 ## Testes e APK pelo GitHub
 
 O GitHub Actions executa os testes, a análise estática e gera o APK em cada envio à `main` e em pull requests. Para iniciar manualmente, abra **Actions → Android — testes e APK → Run workflow**.
