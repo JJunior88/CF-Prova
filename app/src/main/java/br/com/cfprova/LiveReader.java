@@ -92,7 +92,7 @@ public final class LiveReader {
                 for(int k=0;k<16;k++){
                     double angle=k*Math.PI/8,best=255;
                     for(double band:new double[]{radius-.8,radius,radius+.8}){double value=sample(pixels,width,height,map,x+band*Math.cos(angle),y+band*Math.sin(angle));if(value>=0)best=Math.min(best,value);}
-                    if(best<paper-(paper-ink)*.35)border++;
+                    if(best<paper-(paper-ink)*(table?.18:.35))border++;
                 }
                 if(border>=8)rings++;
             }

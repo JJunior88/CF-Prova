@@ -15,6 +15,18 @@ public class CapturedCardTest {
         for(int i=0;i<20;i++){key[i]=i%5;expected[i]=i%4==0?-1:i%5;}assertArrayEquals(expected,r.answers);assertEquals(15,Grading.correct(key,r.answers));
     }
     @Test public void tableDoubleMarkIsNotGraded()throws Exception{assertNull(readTable("/table-v3-double.jpg").answers);}
+    @Test public void readsReducedSoftPhotoThatPreviouslyFailedRingCheck()throws Exception{
+        LiveReader.Reading r=readTable("/table-v3-soft-filled.jpg");assertNotNull(r.hint,r.answers);int[] expected=new int[20];for(int i=0;i<20;i++)expected[i]=i%4==0?-1:i%5;assertArrayEquals(expected,r.answers);
+    }
+    @Test public void blurredLettersAloneRemainBlank()throws Exception{
+        int[] expected=new int[20];java.util.Arrays.fill(expected,-1);assertArrayEquals(expected,readTable("/table-v3-soft-blank.jpg").answers);
+    }
+    @Test public void blurredDoubleMarkStillBlocksGrade()throws Exception{assertNull(readTable("/table-v3-soft-double.jpg").answers);}
+    @Test public void printedLettersWithoutCircleOutlinesCannotProduceGrade()throws Exception{assertNull(readTable("/table-v3-no-rings.jpg").answers);}
+    @Test public void readsTableUnderUnevenLighting()throws Exception{
+        LiveReader.Reading r=readTable("/table-v3-shadow.jpg");assertNotNull(r.hint,r.answers);int[] expected=new int[20];for(int i=0;i<20;i++)expected[i]=i%4==0?-1:i%5;assertArrayEquals(expected,r.answers);
+    }
+    @Test public void excessiveBlurStillCannotProduceGrade()throws Exception{assertNull(readTable("/table-v3-unreadable.jpg").answers);}
     private LiveReader.Reading readTable(String resource)throws Exception{
         try(InputStream in=getClass().getResourceAsStream(resource)){
             Object image=Class.forName("javax.imageio.ImageIO").getMethod("read",InputStream.class).invoke(null,in);Class<?> type=Class.forName("java.awt.image.BufferedImage");

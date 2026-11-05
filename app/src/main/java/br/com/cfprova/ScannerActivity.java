@@ -31,6 +31,7 @@ public class ScannerActivity extends ComponentActivity {
     private Button shutter,retryCamera,flashButton,finishReview;
     private Switch immediate;
     private Camera camera;
+    private MeteringPoint focusPoint;
     private final ReadingConsensus consensus=new ReadingConsensus();
     private volatile boolean immediateEnabled=false;
     private volatile int previewCycle;
@@ -108,9 +109,9 @@ public class ScannerActivity extends ComponentActivity {
     private void bindCamera(){
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED)return;
         try{
-            stopLight();consensus.reset();previewCycle++;provider.unbindAll();
+            stopLight();focusPoint=null;consensus.reset();previewCycle++;provider.unbindAll();
             Preview view=new Preview.Builder().build();view.setSurfaceProvider(preview.getSurfaceProvider());
-            capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).setTargetResolution(new Size(1920,1440)).setJpegQuality(95).setFlashMode(ImageCapture.FLASH_MODE_OFF).build();
+            capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).setTargetResolution(new Size(2560,1920)).setJpegQuality(95).setFlashMode(ImageCapture.FLASH_MODE_OFF).build();
             ImageAnalysis analysis=new ImageAnalysis.Builder().setTargetResolution(new Size(1280,960)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
             analysis.setAnalyzer(worker,this::analyzePreview);
             try{camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture,analysis);}
@@ -120,7 +121,7 @@ public class ScannerActivity extends ComponentActivity {
                 immediateEnabled=false;immediate.setChecked(false);immediate.setEnabled(false);hint.setText(R.string.immediate_unavailable);
             }
             flashButton.setEnabled(camera.getCameraInfo().hasFlashUnit());flashButton.setText(camera.getCameraInfo().hasFlashUnit()?R.string.flash_off:R.string.flash_unavailable);
-            preview.setOnTouchListener((v,event)->{if(event.getAction()==MotionEvent.ACTION_UP){v.performClick();try{camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(preview.getMeteringPointFactory().createPoint(event.getX(),event.getY())).build());}catch(IllegalArgumentException ignored){/* Camera is stopping. */}}return true;});
+            preview.setOnTouchListener((v,event)->{if(event.getAction()==MotionEvent.ACTION_UP){v.performClick();try{focusPoint=preview.getMeteringPointFactory().createPoint(event.getX(),event.getY());camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(focusPoint).build());}catch(IllegalArgumentException ignored){/* Camera is stopping. */}}return true;});
             shutter.setEnabled(true);retryCamera.setVisibility(View.GONE);if(immediateEnabled)hint.setText(R.string.immediate_guide);
         }catch(Exception e){cameraError();}
     }
@@ -161,6 +162,20 @@ public class ScannerActivity extends ComponentActivity {
     private void takePhoto(){
         if(!active||busy||capture==null)return;
         busy=true;previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);readingStatus.setText(R.string.reader_checking_photo);final int token=photo.begin();
+        hint.setText(R.string.focusing_photo);
+        java.util.concurrent.atomic.AtomicBoolean started=new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable ready=()->{if(started.getAndSet(true)||!active||!photo.isCurrent(token)||capture==null||isFinishing())return;capturePhoto(token);};
+        Handler handler=new Handler(Looper.getMainLooper());
+        // Bound the focus wait: fixed-focus cameras and unsupported AF still allow capture.
+        handler.postDelayed(ready,1500);
+        try{
+            MeteringPoint point=focusPoint!=null?focusPoint:preview.getMeteringPointFactory().createPoint(preview.getWidth()/2f,preview.getHeight()/2f);
+            ListenableFuture<FocusMeteringResult> focus=camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(point).build());
+            focus.addListener(()->handler.postDelayed(ready,150),ContextCompat.getMainExecutor(this));
+        }catch(RuntimeException e){handler.postDelayed(ready,150);}
+    }
+    private void capturePhoto(int token){
+        hint.setText(R.string.processing_photo);
         // The in-memory callback has no OutputFileOptions, MediaStore or file URI.
         capture.takePicture(worker,new ImageCapture.OnImageCapturedCallback(){
             @Override public void onCaptureSuccess(ImageProxy image){
@@ -182,22 +197,22 @@ public class ScannerActivity extends ComponentActivity {
     }
     private Bitmap decodePhoto(ImageProxy image){
         if(image.getFormat()==android.graphics.ImageFormat.YUV_420_888){
-            ImageProxy.PlaneProxy plane=image.getPlanes()[0];LumaFrame frame=LumaFrame.from(plane.getBuffer(),image.getWidth(),image.getHeight(),plane.getRowStride(),plane.getPixelStride(),image.getImageInfo().getRotationDegrees(),2000);
+            ImageProxy.PlaneProxy plane=image.getPlanes()[0];LumaFrame frame=LumaFrame.from(plane.getBuffer(),image.getWidth(),image.getHeight(),plane.getRowStride(),plane.getPixelStride(),image.getImageInfo().getRotationDegrees(),2800);
             int[] colors=new int[frame.pixels.length];for(int i=0;i<colors.length;i++){int y=frame.pixels[i]&255;colors[i]=Color.rgb(y,y,y);}return Bitmap.createBitmap(colors,frame.width,frame.height,Bitmap.Config.ARGB_8888);
         }
         ByteBuffer buffer=image.getPlanes()[0].getBuffer();byte[] jpeg=new byte[buffer.remaining()];buffer.get(jpeg);
         BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);
-        options.inSampleSize=1;while(Math.max(options.outWidth,options.outHeight)/options.inSampleSize>2400)options.inSampleSize*=2;
+        options.inSampleSize=1;while(Math.max(options.outWidth,options.outHeight)/options.inSampleSize>3200)options.inSampleSize*=2;
         options.inJustDecodeBounds=false;Bitmap decoded=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,options);if(decoded==null)throw new IllegalArgumentException("Invalid camera JPEG");
         int rotation=image.getImageInfo().getRotationDegrees();if(rotation!=0){Matrix m=new Matrix();m.setRotate(rotation);Bitmap upright=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),m,true);if(upright!=decoded)decoded.recycle();decoded=upright;}return decoded;
     }
     private LiveReader.Reading readPhoto(Bitmap image){return readPhoto(image,null);}
     private LiveReader.Reading readPhoto(Bitmap image,double[] corners){
-        double scale=Math.min(1,2400.0/Math.max(image.getWidth(),image.getHeight()));
+        double scale=Math.min(1,2800.0/Math.max(image.getWidth(),image.getHeight()));
         Bitmap small=Bitmap.createScaledBitmap(image,Math.max(1,(int)(image.getWidth()*scale)),Math.max(1,(int)(image.getHeight()*scale)),true);
         try{
-            int w=small.getWidth(),h=small.getHeight();int[] colors=new int[w*h];small.getPixels(colors,0,w,0,0,w,h);byte[] luma=new byte[colors.length];
-            for(int i=0;i<colors.length;i++){int c=colors[i];luma[i]=(byte)(int)(.299*Color.red(c)+.587*Color.green(c)+.114*Color.blue(c));}
+            int w=small.getWidth(),h=small.getHeight();int[] colors=new int[w];byte[] luma=new byte[w*h];
+            for(int y=0;y<h;y++){small.getPixels(colors,0,w,0,y,w,1);for(int x=0;x<w;x++){int c=colors[x];luma[y*w+x]=(byte)(int)(.299*Color.red(c)+.587*Color.green(c)+.114*Color.blue(c));}}
             if(corners==null)return new LiveReader().read(luma,w,h,key.length);
             double[] scaled=corners.clone();for(int i=0;i<8;i++)scaled[i]*=i%2==0?w/(double)image.getWidth():h/(double)image.getHeight();
             return new LiveReader().readAligned(luma,w,h,key.length,scaled);

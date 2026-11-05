@@ -48,7 +48,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com 
 
 ## Download direto para Android
 
-[Baixar CF Prova 0.8.0 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.8.0.apk)
+[Baixar CF Prova 0.8.1 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.8.1.apk)
 
 O link direto não exige login nem extração de ZIP. No Android, abra o arquivo baixado e permita a instalação dessa origem, se solicitado. Android 8.0 ou posterior. APK de desenvolvimento; a assinatura é a mesma do APK compilado neste ambiente. O [SHA-256](downloads/SHA256SUMS) permite conferir a integridade do arquivo.
 
@@ -107,3 +107,11 @@ O cartão padrão segue o modelo de referência fornecido: uma tabela com o núm
 O modelo usa assinatura óptica v3 para distinguir a tabela dos cartões v2 anteriores. O leitor usa pontos entre a letra e a borda para identificar preenchimento, evitando interpretar a própria letra como resposta. Modelos v2 continuam sendo reconhecidos. Use a versão 0.8.0 ou posterior para os novos cartões; versões anteriores não conhecem o novo formato. Na atualização, confira novamente o gabarito do professor e a quantidade de alternativas antes de corrigir.
 
 Testes com a renderização real do Android cobrem tabelas de 5, 14, 20 e 40 questões, vazias e preenchidas, incluindo a alternativa E. Três JPEGs de regressão incluem letras impressas sem marcação, respostas preenchidas com 15 acertos em 20 e marca dupla bloqueada. Os marcadores de alinhamento continuam necessários para localização automática. A imagem de referência enviada pelo usuário não é, por si só, um cartão compatível: imprima o Word/PDF gerado por esta versão. A precisão da câmera física ainda depende de validação no aparelho.
+
+## Foco e tolerância da leitura (0.8.1)
+
+Antes de fotografar, o app solicita ajuste de foco e exposição no ponto tocado na prévia, ou no centro quando nenhum ponto foi escolhido. A captura aguarda a conclusão dessa solicitação e mais 150 ms para acomodação; há um limite de 1,5 segundo para aparelhos sem resposta do foco. Sair ou colocar o app em segundo plano invalida a captura pendente. Isso solicita o foco ao aparelho, sem garantir que o hardware consiga focar em todas as condições.
+
+A foto solicita resolução de 2560 × 1920, quando disponível no aparelho, e preserva até 2800 pixels no lado maior durante a análise. A conversão para tons de cinza usa uma linha por vez para reduzir memória. O leitor tolera o menor contraste das bordas finas das bolhas da tabela causado por redução/JPEG/desfoque moderado; validação do código, geometria, contraste local e ambiguidades de preenchimento permanecem ativas. Não há alteração no cartão impresso e não é necessário reimprimir o modelo v3.
+
+Foram acrescentadas regressões para cartão pequeno e suavizado que antes falhava, letras sem marcação, marca dupla desfocada, ausência de círculos, sombra gradual e desfoque excessivo. A câmera, o foco e a resolução real ainda precisam de teste físico no Android.
