@@ -45,6 +45,6 @@
     <string name="reader_checking_photo">CONFERINDO FOTO</string>
     <string name="reader_manual">CAPTURA MANUAL</string>
     <string name="reader_hold">Cartão reconhecido. Mantenha firme enquanto as marcações são confirmadas. A captura será automática.</string>
-    <string name="pending_answers">%1$d respostas para conferir\nNota disponível ao concluir</string>
+    <string name="pending_answers">Respostas pendentes: %1$d\nNota disponível ao concluir</string>
     <string name="mark_four">Marque os quatro quadrados antes de continuar.</string>
 </resources>
