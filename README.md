@@ -13,7 +13,7 @@ A interface mantém cartões de etapas, botões de ação destacados e acesso fi
 ## Como usar
 
 1. Defina nome e quantidade de questões (5 a 40) e confira todas as alternativas do gabarito do professor.
-2. Gere o **Word editável (.docx)** ou **PDF** do **cartão-resposta v2**: um cartão no **canto inferior direito** de uma A4, ocupando menos de 1/4 da página. O modelo contém apenas números das questões, alternativas A–E e os marcadores/código necessários à leitura, sem identificação. Preserve esses elementos. Cartões v2 anteriores continuam compatíveis.
+2. Gere o **Word editável (.docx)** ou **PDF** do **cartão-resposta do app**: um cartão no **canto inferior direito** de uma A4, ocupando menos de 1/4 da página. O modelo contém apenas números das questões, alternativas A–E e os marcadores/código necessários à leitura, sem identificação. Preserve esses elementos. Cartões v2 anteriores continuam compatíveis.
 3. Imprima em A4, a 100%. O aluno deve preencher uma bolha inteira por questão com caneta escura.
 4. Toque em **Ler cartão-resposta**, permita a câmera e enquadre um cartão com os quatro marcadores visíveis. O leitor procura o cartão na imagem, sem exigir que ele fique no centro ou alinhado aos cantos da foto. Pode reconhecer o cartão girado; fotografar de frente, sem dobrar a folha, continua dando mais nitidez.
 5. Se precisar, toque em **Flash desligado** para ligar a luz contínua do flash. Ela ilumina a prévia e a foto. Toque em **Flash ligado** para desligar, inclusive se houver reflexos. Aparelhos sem esse recurso mostram **Sem flash**.
@@ -48,7 +48,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com 
 
 ## Download direto para Android
 
-[Baixar CF Prova 0.7.0 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.7.0.apk)
+[Baixar CF Prova 0.8.0 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.8.0.apk)
 
 O link direto não exige login nem extração de ZIP. No Android, abra o arquivo baixado e permita a instalação dessa origem, se solicitado. Android 8.0 ou posterior. APK de desenvolvimento; a assinatura é a mesma do APK compilado neste ambiente. O [SHA-256](downloads/SHA256SUMS) permite conferir a integridade do arquivo.
 
@@ -97,3 +97,13 @@ Após fotografar, há três caminhos:
 - **Conferir respostas manualmente:** todas as respostas começam como **pendentes**, sem alternativas presumidas. Consulte a foto ampliável pelo botão fixo na parte inferior e selecione A–E ou Em branco em cada questão. Nota e conclusão ficam bloqueadas até todas serem informadas. Esta opção é uma transcrição pelo professor, não reconhecimento automático.
 
 O cartão v2 permanece compatível, sem identificação, no canto inferior direito. Fotos e alinhamentos ficam só na memória. Os testes incluem leitura com alinhamento manual sem código legível, rejeição de pontos inválidos, marca dupla e quantidade divergente. A interface foi exercitada em Android simulado, incluindo o bloqueio de conclusão enquanto há respostas pendentes; câmera física ainda requer validação no aparelho.
+
+## Cartão em tabela com A–E (0.8.0)
+
+O cartão padrão segue o modelo de referência fornecido: uma tabela com o número da questão à esquerda e cinco círculos por linha, com **A, B, C, D e E dentro dos círculos**. O aluno deve pintar completamente apenas um círculo por questão, cobrindo a letra. Não use apenas X, traço ou contorno. O cartão permanece sem identificação e no canto inferior direito da A4, em 87 × 130,5 mm. A quantidade continua configurável entre 5 e 40; mais questões significam círculos menores. O app também permite tabela A–D pela seleção de alternativas, mas o padrão desta versão é A–E.
+
+[Word atualizado](modelos/cartao-20-questoes.docx) · [PDF atualizado](modelos/cartao-20-questoes.pdf) · [Prévia do cartão](docs/visual/cartao-tabela.png)
+
+O modelo usa assinatura óptica v3 para distinguir a tabela dos cartões v2 anteriores. O leitor usa pontos entre a letra e a borda para identificar preenchimento, evitando interpretar a própria letra como resposta. Modelos v2 continuam sendo reconhecidos. Use a versão 0.8.0 ou posterior para os novos cartões; versões anteriores não conhecem o novo formato. Na atualização, confira novamente o gabarito do professor e a quantidade de alternativas antes de corrigir.
+
+Testes com a renderização real do Android cobrem tabelas de 5, 14, 20 e 40 questões, vazias e preenchidas, incluindo a alternativa E. Três JPEGs de regressão incluem letras impressas sem marcação, respostas preenchidas com 15 acertos em 20 e marca dupla bloqueada. Os marcadores de alinhamento continuam necessários para localização automática. A imagem de referência enviada pelo usuário não é, por si só, um cartão compatível: imprima o Word/PDF gerado por esta versão. A precisão da câmera física ainda depende de validação no aparelho.

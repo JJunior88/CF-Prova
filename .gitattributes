@@ -1,0 +1,5 @@
+
+# Printable models and Android packages are binary artifacts.
+*.pdf binary
+*.docx binary
+*.apk binary

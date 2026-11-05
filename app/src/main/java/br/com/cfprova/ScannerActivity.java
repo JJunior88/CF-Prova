@@ -45,12 +45,13 @@ public class ScannerActivity extends ComponentActivity {
     private volatile boolean active,busy,reviewing;
     private boolean starting;
     private int[] key,answers;
+    private int alternatives=5;
     private String exam;
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         // Prevent the OS from storing a photo thumbnail in the recent-apps screen.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        key=getIntent().getIntArrayExtra("key");exam=getIntent().getStringExtra("exam");
+        alternatives=getIntent().getIntExtra("alternatives",5);key=getIntent().getIntArrayExtra("key");exam=getIntent().getStringExtra("exam");
         if(key==null||key.length<5||key.length>40){finish();return;}
         cameraScreen();permission();
     }
@@ -170,7 +171,7 @@ public class ScannerActivity extends ComponentActivity {
                     runOnUiThread(()->{
                         if(!active||isFinishing()||isDestroyed()){ready.recycle();return;}
                         if(!photo.accept(token,ready))return;
-                        busy=false;answers=reading.answers==null?null:reading.answers.clone();reviewing=true;
+                        busy=false;answers=reviewAnswers(reading.answers);reviewing=true;
                         stopLight();if(provider!=null)provider.unbindAll();reviewScreen(reading.hint);
                     });
                 }catch(RuntimeException e){if(decoded!=null)decoded.recycle();captureFailed(token);}
@@ -219,11 +220,11 @@ public class ScannerActivity extends ComponentActivity {
         if(answers==null){LinearLayout warning=AppUi.card(this);warning.setBackground(AppUi.shape(this,0xfffff2dc,20));warning.addView(AppUi.text(this,getString(R.string.photo_unreadable,readingHint),15,0xff78521f,false));content.addView(warning,AppUi.block(this,12));}
         else{
             content.addView(AppUi.text(this,getString(R.string.answers_title),20,AppUi.INK,true));AppUi.gap(content,6);content.addView(AppUi.text(this,getString(R.string.review_answers),13,AppUi.MUTED,false));AppUi.gap(content,14);
-            String[] choices={"Selecione…","A","B","C","D","E",getString(R.string.blank)};
+            String[] choices=new String[alternatives+2];choices[0]="Selecione…";for(int j=0;j<alternatives;j++)choices[j+1]=""+(char)('A'+j);choices[alternatives+1]=getString(R.string.blank);
             for(int i=0;i<answers.length;i++){
                 final int index=i;LinearLayout card=AppUi.card(this);card.setPadding(dp(12),dp(12),dp(12),dp(12));LinearLayout row=AppUi.row(this);LinearLayout label=AppUi.column(this);label.addView(AppUi.text(this,getString(R.string.question_key,i+1,String.valueOf((char)('A'+key[i]))),15,AppUi.INK,true));AppUi.gap(label,6);TextView state=AppUi.badge(this,"",AppUi.TEAL,0xffe8f5ee);answerState(state,index);label.addView(state);row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]==-2?0:answers[i]==-1?6:answers[i]+1);spinner.setBackground(AppUi.outline(this,0xfff4f7fc,12,AppUi.LINE));spinner.setContentDescription(getString(R.string.answer_description,i+1));
-                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==0?-2:pos==6?-1:pos-1;updateSummary();answerState(state,index);}}});
+                Spinner spinner=new Spinner(this);spinner.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,choices));spinner.setSelection(answers[i]==-2?0:answers[i]==-1?alternatives+1:answers[i]+1);spinner.setBackground(AppUi.outline(this,0xfff4f7fc,12,AppUi.LINE));spinner.setContentDescription(getString(R.string.answer_description,i+1));
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(answers!=null){answers[index]=pos==0?-2:pos==alternatives+1?-1:pos-1;updateSummary();answerState(state,index);}}});
                 row.addView(spinner,new LinearLayout.LayoutParams(dp(114),dp(52)));card.addView(row);content.addView(card,AppUi.block(this,8));
             }
         }
@@ -234,6 +235,7 @@ public class ScannerActivity extends ComponentActivity {
         LinearLayout secondary=AppUi.row(this);Button retake=AppUi.button(this,getString(R.string.retake),false,"camera",this::cameraScreen);Button exit=AppUi.button(this,getString(R.string.discard_exit),false,null,this::finish);LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,-2,1);half.rightMargin=dp(8);secondary.addView(retake,half);secondary.addView(exit,new LinearLayout.LayoutParams(0,-2,1));dock.addView(secondary);updateSummary();
     }
     private void answerState(TextView view,int i){boolean correct=answers[i]==key[i];view.setText(answers[i]==-2?"Pendente":getString(correct?R.string.answer_correct:answers[i]<0?R.string.blank:R.string.answer_wrong));view.setTextColor(correct?AppUi.TEAL:AppUi.MUTED);view.setBackground(AppUi.shape(this,correct?0xffe7f5ee:0xffeef1f7,10));}
+    private int[] reviewAnswers(int[] detected){if(detected==null)return null;int[] result=detected.clone();for(int i=0;i<result.length;i++)if(result[i]>=alternatives)result[i]=-2;return result;}
     private int pendingAnswers(){int pending=0;if(answers!=null)for(int answer:answers)if(answer==-2)pending++;return pending;}
     private void updateSummary(){
         if(summary==null)return;int pending=pendingAnswers();
@@ -256,7 +258,7 @@ public class ScannerActivity extends ComponentActivity {
             worker.execute(()->{
                 LiveReader.Reading reading;
                 try{reading=readPhoto(snapshot,corners);}catch(RuntimeException e){reading=new LiveReader.Reading(null,"Não foi possível ler a área. Refaça a foto ou confira manualmente.");}finally{snapshot.recycle();}
-                LiveReader.Reading result=reading;runOnUiThread(()->{if(!active||isFinishing()||photo.get()!=source)return;answers=result.answers==null?null:result.answers.clone();reviewScreen(result.hint);});
+                LiveReader.Reading result=reading;runOnUiThread(()->{if(!active||isFinishing()||photo.get()!=source)return;answers=reviewAnswers(result.answers);reviewScreen(result.hint);});
             });
         });box.addView(apply,AppUi.block(this,8));
         box.addView(AppUi.button(this,"Desfazer último ponto",false,null,picker::undo),AppUi.block(this,8));

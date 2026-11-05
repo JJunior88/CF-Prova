@@ -2,9 +2,9 @@ package br.com.cfprova;
 
 import java.util.*;
 
-/** Locates the app's v2 answer card anywhere in a frame, then rectifies its geometry. */
+/** Locates v2 cards and v3 lettered tables, then rectifies their geometry. */
 public final class LiveReader {
-    public static final int SIGNATURE=0xD3;
+    public static final int SIGNATURE=0xD3,TABLE_SIGNATURE=0xD4,TABLE_FIVE_SIGNATURE=0xD5;
     public static final class Reading {
         public final int[] answers;
         public final String hint;
@@ -20,6 +20,9 @@ public final class LiveReader {
     }
     public static double rowY(int i,int count){return 195+i*610.0/(count-1);}
     public static boolean codeBit(int index,int count){return index<8?((SIGNATURE>>(7-index))&1)!=0:((count>>(13-index))&1)!=0;}
+    public static double tableRadius(int count){return Math.min(18,610.0/(count-1)*.32);}
+    public static double tableX(int option,int alternatives){return 130+(option+.5)*400/alternatives;}
+    public static boolean tableCodeBit(int index,int count,int alternatives){int signature=alternatives==5?TABLE_FIVE_SIGNATURE:TABLE_SIGNATURE;return index<8?((signature>>(7-index))&1)!=0:((count>>(13-index))&1)!=0;}
     public Reading read(byte[] pixels,int width,int height,int count){
         if(count<5||count>40||width<100||height<100||pixels.length!=width*height)throw new IllegalArgumentException();
         int[] hist=new int[256];for(byte p:pixels)hist[p&255]++;
@@ -52,10 +55,10 @@ public final class LiveReader {
                 }
             }
         }
-        if(cards.isEmpty())return new Reading(null,"Código ou marcadores sem nitidez. Use o cartão-resposta v2 do app, aproxime e toque para focar; ative a luz se necessário.");
+        if(cards.isEmpty())return new Reading(null,"Código ou marcadores sem nitidez. Use o cartão-resposta gerado pelo app, aproxime e toque para focar; ative a luz se necessário.");
         Card card=cards.get(0);
-        if(card.count!=count)return new Reading(null,"O cartão-resposta tem "+card.count+" questões, mas a prova está configurada com "+count+". Use o modelo correspondente.");
-        return readGrid(pixels,width,height,count,card.map);
+        if((card.count&63)!=count)return new Reading(null,"O cartão-resposta tem "+(card.count&63)+" questões, mas a prova está configurada com "+count+". Use o modelo correspondente.");
+        return readGrid(pixels,width,height,count,card.map,card.count>=128?5:card.count>=64?4:0);
     }
     /** Teacher-selected marker centers, in image pixels: TL, TR, BR, BL. */
     public Reading readAligned(byte[] pixels,int width,int height,int count,double[] corners){
@@ -69,23 +72,26 @@ public final class LiveReader {
         if(!convex(points)||distance(points[0],points[1])<90||distance(points[0],points[3])<140)return new Reading(null,"Toque nos quadrados na ordem indicada. Aproxime a câmera se o cartão estiver pequeno.");
         double[] map=homography(points);if(map==null)return new Reading(null,"Alinhamento inválido. Marque novamente os quatro quadrados.");
         int decoded=decode(pixels,width,height,map);
-        if(decoded>=0&&decoded!=count)return new Reading(null,"O cartão tem "+decoded+" questões. Ajuste a quantidade da prova.");
-        return readGrid(pixels,width,height,count,map);
+        if(decoded>=0&&(decoded&63)!=count)return new Reading(null,"O cartão tem "+(decoded&63)+" questões. Ajuste a quantidade da prova.");
+        if(decoded>=0)return readGrid(pixels,width,height,count,map,decoded>=128?5:decoded>=64?4:0);
+        Reading legacy=readGrid(pixels,width,height,count,map,0);if(legacy.answers!=null)return legacy;
+        Reading five=readGrid(pixels,width,height,count,map,5);return five.answers!=null?five:readGrid(pixels,width,height,count,map,4);
     }
-    private Reading readGrid(byte[] pixels,int width,int height,int count,double[] map){
-        int[] answers=new int[count];int rings=0;
+    private Reading readGrid(byte[] pixels,int width,int height,int count,double[] map,int layout){
+        boolean table=layout!=0;
+        int[] answers=new int[count];int rings=0,options=table?layout:5;double radius=table?tableRadius(count):6;
         for(int i=0;i<count;i++){
             double[] dark=new double[5];
-            for(int j=0;j<5;j++){
-                double x=220+j*65,y=rowY(i,count),paper=paper(pixels,width,height,map,x,y,10),ink=markerInk(pixels,width,height,map);
+            for(int j=0;j<options;j++){
+                double x=table?tableX(j,options):220+j*65,y=rowY(i,count),paper=paper(pixels,width,height,map,x,y,table?radius*1.35:10),ink=markerInk(pixels,width,height,map);
                 if(paper-ink<35)return new Reading(null,"Contraste insuficiente. Ative a luz, evite reflexos e refaça a leitura.");
-                dark[j]=darkness(pixels,width,height,map,x,y,3,paper,ink);
+                dark[j]=table?printedBubbleDarkness(pixels,width,height,map,x,y,radius,paper,ink):darkness(pixels,width,height,map,x,y,3,paper,ink);
                 if(dark[j]<0)return new Reading(null,"Mantenha os quatro marcadores e todas as respostas visíveis.");
                 // The thin printed outline can shift by a pixel after JPEG/resize. Search a narrow radial band.
                 int border=0;
                 for(int k=0;k<16;k++){
                     double angle=k*Math.PI/8,best=255;
-                    for(double radius:new double[]{5.2,6,6.8}){double value=sample(pixels,width,height,map,x+radius*Math.cos(angle),y+radius*Math.sin(angle));if(value>=0)best=Math.min(best,value);}
+                    for(double band:new double[]{radius-.8,radius,radius+.8}){double value=sample(pixels,width,height,map,x+band*Math.cos(angle),y+band*Math.sin(angle));if(value>=0)best=Math.min(best,value);}
                     if(best<paper-(paper-ink)*.35)border++;
                 }
                 if(border>=8)rings++;
@@ -93,7 +99,7 @@ public final class LiveReader {
             answers[i]=Grading.classify(dark);
             if(answers[i]==-2)return new Reading(null,"Confira o preenchimento da questão "+(i+1)+": marca fraca, dupla ou imagem desfocada. Corrija e refaça.");
         }
-        if(rings<count*5*.75)return new Reading(null,"Bolhas sem nitidez. Aproxime do cartão-resposta, toque para focar e evite reflexos.");
+        if(rings<count*options*.75)return new Reading(null,"Bolhas sem nitidez. Aproxime do cartão-resposta, toque para focar e evite reflexos.");
         return new Reading(answers,"Cartão-resposta reconhecido.");
     }
     private static List<Marker> findMarkers(byte[] pixels,int width,int height,int white){
@@ -130,7 +136,7 @@ public final class LiveReader {
             double value=darkness(p,w,h,map,x,45,1,white,ink);int bit=value>.65?1:value<.25?0:-1;if(bit<0)return -1;
             if(i<8)signature=(signature<<1)|bit;else count=(count<<1)|bit;
         }
-        return signature==SIGNATURE&&count>=5&&count<=40?count:-1;
+        return count>=5&&count<=40?(signature==SIGNATURE?count:signature==TABLE_SIGNATURE?count+64:signature==TABLE_FIVE_SIGNATURE?count+128:-1):-1;
     }
     private static double markerInk(byte[] p,int w,int h,double[] m){double[] values={sample(p,w,h,m,40,40),sample(p,w,h,m,560,40),sample(p,w,h,m,560,860),sample(p,w,h,m,40,860)};Arrays.sort(values);return (values[1]+values[2])/2;}
     private static double paper(byte[] p,int w,int h,double[] m,double x,double y,double radius){double[] values=new double[16];for(int i=0;i<16;i++){double a=i*Math.PI/8;values[i]=sample(p,w,h,m,x+radius*Math.cos(a),y+radius*Math.sin(a));}Arrays.sort(values);return (values[10]+values[11])/2;}
@@ -139,6 +145,10 @@ public final class LiveReader {
         double xx=(m[0]*x+m[1]*y+m[2])/z,yy=(m[3]*x+m[4]*y+m[5])/z;
         int ix=(int)Math.floor(xx),iy=(int)Math.floor(yy);if(ix<0||ix>=w-1||iy<0||iy>=h-1)return -1;
         double dx=xx-ix,dy=yy-iy;return (1-dy)*((1-dx)*(p[iy*w+ix]&255)+dx*(p[iy*w+ix+1]&255))+dy*((1-dx)*(p[(iy+1)*w+ix]&255)+dx*(p[(iy+1)*w+ix+1]&255));
+    }
+    // Sample outside the printed letter, inside the circle; center ink alone is never a mark.
+    private static double printedBubbleDarkness(byte[] p,int w,int h,double[] m,double x,double y,double radius,double paper,double ink){
+        double total=0;for(int i=0;i<24;i++){double angle=i*Math.PI/12,value=sample(p,w,h,m,x+radius*.74*Math.cos(angle),y+radius*.74*Math.sin(angle));if(value<0)return -1;total+=Math.max(0,Math.min(1,(paper-value)/(paper-ink)));}return total/24;
     }
     private static double darkness(byte[] p,int w,int h,double[] m,double x,double y,int radius,double paper,double ink){
         double total=0,dark=0;for(int dx=-radius;dx<=radius;dx++)for(int dy=-radius;dy<=radius;dy++)if(dx*dx+dy*dy<=radius*radius){double value=sample(p,w,h,m,x+dx,y+dy);if(value<0)return -1;total++;dark+=Math.max(0,Math.min(1,(paper-value)/(paper-ink)));}return dark/total;

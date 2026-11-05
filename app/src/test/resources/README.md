@@ -7,3 +7,7 @@ Origem: `CardDrawing.draw` de produção, exportação real de `CardDocx.write` 
 Respostas: questões 1, 5, 9, 13 e 17 em branco; nas demais, alternativa de índice `(questão - 1) % 5`, com A = 0. Contra esse mesmo gabarito, o resultado esperado é 15 acertos de 20 e nota 7,5. `CapturedCardTest` decodifica o JPEG no JDK do runner e verifica todas as respostas. A decodificação em Android e o flash físico ainda precisam ser conferidos em aparelho real.
 
 `lower-right-card-20-jpeg.jpg` usa a mesma preparação e respostas esperadas, mas foi gerado com a exportação 0.6.1: somente a grade, sem identificação, posicionada no canto inferior direito da A4. O teste mantém também o JPEG antigo para verificar compatibilidade dos cartões anteriores.
+
+## Tabela A–E v3
+
+`table-v3-blank.jpg`, `table-v3-filled.jpg` e `table-v3-double.jpg` vêm da renderização real de `CardDrawing` no Android simulado (1200 × 1800), com letras dentro dos círculos. O cartão vazio deve retornar vinte respostas em branco. No preenchido, a alternativa da questão i (base zero) é i % 5, exceto i % 4 == 0, que fica em branco: 15 acertos, nota 7,5. O terceiro acrescenta A e B na primeira questão, devendo ser recusado. Os preenchimentos são simulados para testar o algoritmo, não fotos de um dispositivo real.
