@@ -27,6 +27,13 @@ public class CapturedCardTest {
         LiveReader.Reading r=readTable("/table-v3-shadow.jpg");assertNotNull(r.hint,r.answers);int[] expected=new int[20];for(int i=0;i<20;i++)expected[i]=i%4==0?-1:i%5;assertArrayEquals(expected,r.answers);
     }
     @Test public void excessiveBlurStillCannotProduceGrade()throws Exception{assertNull(readTable("/table-v3-unreadable.jpg").answers);}
+    @Test public void rowBordersRecoverSlightlyCurvedFilledCard()throws Exception{
+        LiveReader.Reading r=readTable("/table-v3-curved-filled.jpg");assertNotNull(r.hint,r.answers);int[] expected=new int[20];for(int i=0;i<20;i++)expected[i]=i%4==0?-1:i%5;assertArrayEquals(expected,r.answers);
+    }
+    @Test public void curvedUnfilledLettersRemainBlank()throws Exception{
+        int[] expected=new int[20];java.util.Arrays.fill(expected,-1);assertArrayEquals(expected,readTable("/table-v3-curved-blank.jpg").answers);
+    }
+    @Test public void curvedDoubleMarkIsStillRejected()throws Exception{assertNull(readTable("/table-v3-curved-double.jpg").answers);}
     private LiveReader.Reading readTable(String resource)throws Exception{
         try(InputStream in=getClass().getResourceAsStream(resource)){
             Object image=Class.forName("javax.imageio.ImageIO").getMethod("read",InputStream.class).invoke(null,in);Class<?> type=Class.forName("java.awt.image.BufferedImage");

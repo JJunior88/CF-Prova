@@ -48,7 +48,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. Android 8.0 ou posterior, com 
 
 ## Download direto para Android
 
-[Baixar CF Prova 0.8.1 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.8.1.apk)
+[Baixar CF Prova 0.8.2 (.apk)](https://github.com/JJunior88/CF-Prova/raw/refs/heads/main/downloads/CF-Prova-0.8.2.apk)
 
 O link direto não exige login nem extração de ZIP. No Android, abra o arquivo baixado e permita a instalação dessa origem, se solicitado. Android 8.0 ou posterior. APK de desenvolvimento; a assinatura é a mesma do APK compilado neste ambiente. O [SHA-256](downloads/SHA256SUMS) permite conferir a integridade do arquivo.
 
@@ -115,3 +115,11 @@ Antes de fotografar, o app solicita ajuste de foco e exposição no ponto tocado
 A foto solicita resolução de 2560 × 1920, quando disponível no aparelho, e preserva até 2800 pixels no lado maior durante a análise. A conversão para tons de cinza usa uma linha por vez para reduzir memória. O leitor tolera o menor contraste das bordas finas das bolhas da tabela causado por redução/JPEG/desfoque moderado; validação do código, geometria, contraste local e ambiguidades de preenchimento permanecem ativas. Não há alteração no cartão impresso e não é necessário reimprimir o modelo v3.
 
 Foram acrescentadas regressões para cartão pequeno e suavizado que antes falhava, letras sem marcação, marca dupla desfocada, ausência de círculos, sombra gradual e desfoque excessivo. A câmera, o foco e a resolução real ainda precisam de teste físico no Android.
+
+## Ajuste local da tabela e captura mais simples (0.8.2)
+
+A leitura usa também as bordas horizontais da tabela para ajustar localmente a posição das bolhas. O deslocamento é limitado a uma pequena fração da altura da linha e só é aplicado quando as bordas superior e inferior fornecem evidência suficiente. Isso corrige pequenos desalinhamentos causados por ondulação da folha, preservando a validação de círculos, código e marcações. Não compensa dobras grandes, partes encobertas ou desfoque excessivo.
+
+No modo de foto por botão, a câmera vincula apenas prévia e captura. O fluxo de análise contínua só é vinculado quando **Captura automática** é ativada; desativar a opção libera esse fluxo. Isso reduz os fluxos simultâneos exigidos do aparelho durante a captura manual. Alterar o modo preserva a luz ligada quando disponível, e o controle fica bloqueado durante uma foto para evitar reconfiguração no meio da captura. Aparelhos incompatíveis com três fluxos voltam à foto por botão.
+
+As regressões incluem uma deformação vertical suave de até 10 pixels em uma imagem de 1200 × 1800: antes, cartões preenchidos e vazios eram rejeitados; agora devem conservar exatamente as respostas. Uma marca dupla continua sendo rejeitada na imagem deformada. O mesmo cartão A–E impresso continua válido; não é necessário reimprimir. Validação física da câmera ainda precisa ser feita no aparelho.

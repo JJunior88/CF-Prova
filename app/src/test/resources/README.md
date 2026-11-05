@@ -15,3 +15,7 @@ Respostas: questões 1, 5, 9, 13 e 17 em branco; nas demais, alternativa de índ
 ## Leitura com perda de nitidez (0.8.1)
 
 As imagens derivam dos JPEGs da tabela v3: `table-v3-soft-filled.jpg` foi reduzida para 600 × 900, desfocada com GaussianBlur(1.5) e recomprimida em qualidade 70. A versão 0.8.0 rejeitava essa imagem pela validação das bordas; a 0.8.1 deve retornar exatamente as mesmas respostas (15 acertos em 20). Os casos `soft-blank` e `soft-double` usam GaussianBlur(2) e verificam branco e rejeição da marca dupla. `no-rings` apaga os círculos, preservando letras e marcadores, e deve ser rejeitado. `shadow` reduz o cartão para 840 × 1260 e aplica iluminação horizontal de 45% a 100%; deve preservar todas as respostas. `unreadable` usa GaussianBlur(5) em 600 × 900 e deve ser rejeitado. São simulações, não capturas físicas.
+
+## Pequena ondulação da tabela (0.8.2)
+
+`table-v3-curved-filled.jpg`, `table-v3-curved-blank.jpg` e `table-v3-curved-double.jpg` derivam dos casos correspondentes com uma deformação vertical senoidal de amplitude 10 px, entre as linhas y=80 e y=1720, interpolação bicúbica e JPEG qualidade 80. Os quatro marcadores permanecem aproximadamente fixos, enquanto as linhas internas se deslocam. A versão 0.8.1 rejeitava o preenchido e o vazio. O ajuste local pelas bordas da tabela deve recuperar exatamente as respostas do preenchido, manter vinte brancos no vazio e rejeitar a marca dupla. É uma simulação de pequena deformação, não uma fotografia de papel dobrado.

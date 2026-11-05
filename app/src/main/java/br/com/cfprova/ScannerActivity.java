@@ -44,7 +44,7 @@ public class ScannerActivity extends ComponentActivity {
     private ProcessCameraProvider provider;
     private ImageCapture capture;
     private volatile boolean active,busy,reviewing;
-    private boolean starting;
+    private boolean starting,binding;
     private int[] key,answers;
     private int alternatives=5;
     private String exam;
@@ -82,7 +82,7 @@ public class ScannerActivity extends ComponentActivity {
         TextView privacy=AppUi.text(this,getString(R.string.camera_privacy),12,0xffc6d8ef,false);privacy.setGravity(Gravity.CENTER);root.addView(privacy);AppUi.gap(root,8);
         LinearLayout controls=AppUi.row(this);
         immediate=new Switch(this);immediate.setText(R.string.immediate_mode);immediate.setTextColor(Color.WHITE);immediate.setTextSize(13);immediate.setMinHeight(dp(48));immediate.setChecked(immediateEnabled);immediate.setContentDescription(getString(R.string.immediate_description));
-        immediate.setOnCheckedChangeListener((v,enabled)->{immediateEnabled=enabled;previewCycle++;consensus.reset();resetReadingStatus();hint.setText(enabled?R.string.immediate_guide:R.string.camera_guide);});
+        immediate.setOnCheckedChangeListener((v,enabled)->{immediateEnabled=enabled;previewCycle++;consensus.reset();resetReadingStatus();hint.setText(enabled?R.string.immediate_guide:R.string.camera_guide);if(provider!=null&&!reviewing&&!binding)bindCamera();});
         controls.addView(immediate,new LinearLayout.LayoutParams(0,-2,1));
         flashButton=AppUi.button(this,getString(R.string.flash_off),false,null,this::toggleLight);flashButton.setEnabled(false);controls.addView(flashButton);root.addView(controls);AppUi.gap(root,8);
         shutter=button(root,R.string.take_photo,this::takePhoto);shutter.setMinHeight(dp(60));shutter.setEnabled(false);
@@ -107,23 +107,26 @@ public class ScannerActivity extends ComponentActivity {
         },ContextCompat.getMainExecutor(this));
     }
     private void bindCamera(){
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED)return;
+        if(ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED||binding)return;
+        boolean restoreLight=lightOn;binding=true;
         try{
             stopLight();focusPoint=null;consensus.reset();previewCycle++;provider.unbindAll();
             Preview view=new Preview.Builder().build();view.setSurfaceProvider(preview.getSurfaceProvider());
             capture=new ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).setTargetResolution(new Size(2560,1920)).setJpegQuality(95).setFlashMode(ImageCapture.FLASH_MODE_OFF).build();
-            ImageAnalysis analysis=new ImageAnalysis.Builder().setTargetResolution(new Size(1280,960)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
-            analysis.setAnalyzer(worker,this::analyzePreview);
-            try{camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture,analysis);}
-            catch(IllegalArgumentException unsupported){
-                // Some older camera implementations cannot run three use cases simultaneously.
-                provider.unbindAll();analysis.clearAnalyzer();camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
-                immediateEnabled=false;immediate.setChecked(false);immediate.setEnabled(false);hint.setText(R.string.immediate_unavailable);
-            }
+            if(immediateEnabled){
+                ImageAnalysis analysis=new ImageAnalysis.Builder().setTargetResolution(new Size(1280,960)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
+                analysis.setAnalyzer(worker,this::analyzePreview);
+                try{camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture,analysis);}
+                catch(IllegalArgumentException unsupported){
+                    provider.unbindAll();analysis.clearAnalyzer();camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
+                    immediateEnabled=false;immediate.setChecked(false);immediate.setEnabled(false);hint.setText(R.string.immediate_unavailable);
+                }
+            }else camera=provider.bindToLifecycle(this,CameraSelector.DEFAULT_BACK_CAMERA,view,capture);
             flashButton.setEnabled(camera.getCameraInfo().hasFlashUnit());flashButton.setText(camera.getCameraInfo().hasFlashUnit()?R.string.flash_off:R.string.flash_unavailable);
             preview.setOnTouchListener((v,event)->{if(event.getAction()==MotionEvent.ACTION_UP){v.performClick();try{focusPoint=preview.getMeteringPointFactory().createPoint(event.getX(),event.getY());camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction.Builder(focusPoint).build());}catch(IllegalArgumentException ignored){/* Camera is stopping. */}}return true;});
             shutter.setEnabled(true);retryCamera.setVisibility(View.GONE);if(immediateEnabled)hint.setText(R.string.immediate_guide);
-        }catch(Exception e){cameraError();}
+            if(restoreLight&&camera.getCameraInfo().hasFlashUnit())toggleLight();
+        }catch(Exception e){cameraError();}finally{binding=false;}
     }
     private void toggleLight(){
         if(camera==null||busy||!camera.getCameraInfo().hasFlashUnit())return;
@@ -161,7 +164,7 @@ public class ScannerActivity extends ComponentActivity {
     private void cameraError(){stopLight();consensus.reset();previewCycle++;if(provider!=null)provider.unbindAll();camera=null;capture=null;shutter.setEnabled(false);flashButton.setEnabled(false);retryCamera.setVisibility(View.VISIBLE);hint.setText(R.string.camera_error);}
     private void takePhoto(){
         if(!active||busy||capture==null)return;
-        busy=true;previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);readingStatus.setText(R.string.reader_checking_photo);final int token=photo.begin();
+        busy=true;immediate.setEnabled(false);previewCycle++;consensus.reset();shutter.setEnabled(false);flashButton.setEnabled(false);hint.setText(R.string.processing_photo);readingStatus.setText(R.string.reader_checking_photo);final int token=photo.begin();
         hint.setText(R.string.focusing_photo);
         java.util.concurrent.atomic.AtomicBoolean started=new java.util.concurrent.atomic.AtomicBoolean();
         Runnable ready=()->{if(started.getAndSet(true)||!active||!photo.isCurrent(token)||capture==null||isFinishing())return;capturePhoto(token);};
@@ -218,7 +221,7 @@ public class ScannerActivity extends ComponentActivity {
             return new LiveReader().readAligned(luma,w,h,key.length,scaled);
         }finally{if(small!=image)small.recycle();}
     }
-    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;resetReadingStatus();immediate.setChecked(false);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
+    private void captureFailed(int token){runOnUiThread(()->{if(!active||!photo.isCurrent(token)||isFinishing())return;busy=false;consensus.reset();immediateEnabled=false;resetReadingStatus();immediate.setChecked(false);immediate.setEnabled(true);shutter.setEnabled(capture!=null);flashButton.setEnabled(camera!=null&&camera.getCameraInfo().hasFlashUnit());hint.setText(R.string.photo_error);});}
     private void reviewScreen(String readingHint){
         finishReview=null;LinearLayout root=screen();root.addView(AppUi.badge(this,"03 / CONFERÊNCIA",AppUi.BLUE,0xffe8eeff));AppUi.gap(root,12);
         root.addView(AppUi.text(this,getString(R.string.review_title),27,AppUi.INK,true));if(exam!=null){AppUi.gap(root,4);root.addView(AppUi.text(this,exam,14,AppUi.MUTED,false));}AppUi.gap(root,14);

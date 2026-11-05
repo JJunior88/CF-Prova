@@ -83,7 +83,9 @@ public final class LiveReader {
         for(int i=0;i<count;i++){
             double[] dark=new double[5];
             for(int j=0;j<options;j++){
-                double x=table?tableX(j,options):220+j*65,y=rowY(i,count),paper=paper(pixels,width,height,map,x,y,table?radius*1.35:10),ink=markerInk(pixels,width,height,map);
+                double x=table?tableX(j,options):220+j*65,y=rowY(i,count),ink=markerInk(pixels,width,height,map);
+                if(table)y=alignedRow(pixels,width,height,map,x,y,count,options,radius,ink);
+                double paper=paper(pixels,width,height,map,x,y,table?radius*1.35:10);
                 if(paper-ink<35)return new Reading(null,"Contraste insuficiente. Ative a luz, evite reflexos e refaça a leitura.");
                 dark[j]=table?printedBubbleDarkness(pixels,width,height,map,x,y,radius,paper,ink):darkness(pixels,width,height,map,x,y,3,paper,ink);
                 if(dark[j]<0)return new Reading(null,"Mantenha os quatro marcadores e todas as respostas visíveis.");
@@ -101,6 +103,22 @@ public final class LiveReader {
         }
         if(rings<count*options*.75)return new Reading(null,"Bolhas sem nitidez. Aproxime do cartão-resposta, toque para focar e evite reflexos.");
         return new Reading(answers,"Cartão-resposta reconhecido.");
+    }
+    /** The printed row borders provide local registration when paper is slightly curved. */
+    private static double alignedRow(byte[] p,int w,int h,double[] map,double x,double y,int count,int options,double radius,double ink){
+        double step=610.0/(count-1),limit=Math.min(6,step*.22),side=400.0/options*.30;
+        double white=paper(p,w,h,map,x,y,radius*1.35);if(white-ink<35)return y;
+        double baseline=rowBorderScore(p,w,h,map,x,y,step,side,white,ink),best=baseline,shift=0;
+        for(double delta=-limit;delta<=limit;delta+=.5){
+            double score=rowBorderScore(p,w,h,map,x,y+delta,step,side,white,ink)-Math.abs(delta)*.006;
+            if(score>best){best=score;shift=delta;}
+        }
+        return best>.45&&best>baseline+.18?y+shift:y;
+    }
+    private static double rowBorderScore(byte[] p,int w,int h,double[] map,double x,double y,double step,double side,double white,double ink){
+        double[] values=new double[4];int k=0;
+        for(int dx:new int[]{-1,1})for(int dy:new int[]{-1,1}){double value=sample(p,w,h,map,x+dx*side,y+dy*step/2);if(value<0)return 0;values[k++]=Math.max(0,Math.min(1,(white-value)/(white-ink)));}
+        Arrays.sort(values);return (values[0]+values[1]+values[2])/3;
     }
     private static List<Marker> findMarkers(byte[] pixels,int width,int height,int white){
         // Local thresholds preserve dark print under uneven light instead of turning a whole shadow black.
